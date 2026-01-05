@@ -7,6 +7,89 @@
     <title>AimThree</title>
   </head>
   <body>
+    <div id="ui-layer">
+      <div id="main-menu">
+        <div class="menu-content">
+            <h1>AIM THREE</h1>
+            
+            <div class="setting-group" style="text-align: center;">
+                <label style="justify-content: center;">DURATION</label>
+                <div class="duration-selector">
+                    <button class="duration-btn" data-time="30">30s</button>
+                    <button class="duration-btn active" data-time="60">60s</button>
+                    <button class="duration-btn" data-time="90">90s</button>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-static">REFLEX MODE</button>
+                <button id="btn-tracking">TRACKING MODE</button>
+                <button id="btn-settings-main">SETTINGS</button>
+            </div>
+            <p class="instructions">Use WASD to Move • Click to Shoot</p>
+        </div>
+      </div>
+
+      <div id="end-screen" style="display: none;">
+        <div class="menu-content">
+            <h1>GAME OVER</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-item">SCORE <span id="final-score">0</span></div>
+                <div class="stat-item">ACCURACY <span id="final-accuracy">0%</span></div>
+                <div class="stat-item">HITS <span id="final-hits">0</span></div>
+                <div class="stat-item">MISSES <span id="final-misses">0</span></div>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-retry">RETRY</button>
+                <button id="btn-restart">MAIN MENU</button>
+            </div>
+        </div>
+      </div>
+
+      <div id="pause-menu" style="display: none;">
+        <div class="menu-content">
+            <h1>PAUSED</h1>
+            <div class="menu-buttons">
+                <button id="btn-resume">RESUME</button>
+                <button id="btn-settings-pause">SETTINGS</button>
+                <button id="btn-quit">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-menu" style="display: none;">
+        <div class="menu-content">
+            <h1>SETTINGS</h1>
+            
+            <div class="setting-group">
+                <label>SENSITIVITY <span id="sens-value">1.0</span></label>
+                <input type="range" id="sens-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="setting-group">
+                <label>CROSSHAIR STYLE</label>
+                <div class="crosshair-selector">
+                    <button class="crosshair-btn" data-style="dot">DOT</button>
+                    <button class="crosshair-btn" data-style="cross">CROSS</button>
+                    <button class="crosshair-btn" data-style="circle">CIRCLE</button>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-back">BACK</button>
+            </div>
+        </div>
+    </div>
+
+      <div id="crosshair" style="display: none;"></div>
+      <div id="hud" style="display: none;">
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 0s</div>
+        <div id="hits">Hits: 0</div>
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

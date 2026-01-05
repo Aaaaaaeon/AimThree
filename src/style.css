@@ -1,26 +1,275 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-  overflow: hidden;
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Segoe UI', sans-serif;
+    user-select: none;
 }
 
 #app {
-  width: 100%;
-  height: 100vh;
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
-#game-container {
-  width: 100%;
-  height: 100%;
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
-canvas {
-  display: block;
+/* HUD */
+#hud {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-family: 'Segoe UI', monospace;
+    font-weight: bold;
+    text-shadow: 0 0 10px #ff00ff;
+    pointer-events: none;
+    display: flex;
+    gap: 30px;
+}
+
+/* Crosshair Styles */
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Dot (Default) */
+.crosshair-dot {
+    width: 8px;
+    height: 8px;
+    background-color: cyan;
+    border-radius: 50%;
+    box-shadow: 0 0 5px cyan;
+}
+
+/* Cross */
+.crosshair-cross::before, .crosshair-cross::after {
+    content: '';
+    position: absolute;
+    background-color: cyan;
+    box-shadow: 0 0 5px cyan;
+}
+.crosshair-cross::before {
+    width: 2px;
+    height: 20px;
+    top: -10px; 
+    left: -1px;
+}
+.crosshair-cross::after {
+    width: 20px;
+    height: 2px;
+    top: -1px;
+    left: -10px;
+}
+
+/* Circle */
+.crosshair-circle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid cyan;
+    border-radius: 50%;
+    box-shadow: 0 0 5px cyan;
+}
+
+/* --- Menu System (Glassmorphism) --- */
+
+/* Glassmorphism Menu Container */
+#pause-menu, #settings-menu, #main-menu, #end-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(20,20,40,0.4) 0%, rgba(5,5,16,0.95) 100%);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: auto; /* Enable clicks */
+}
+
+/* Menu Content Container */
+.menu-content {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    padding: 50px;
+    border-radius: 15px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    min-width: 450px;
+}
+
+/* Headings */
+h1 {
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 4rem;
+    color: #fff;
+    text-shadow: 
+        0 0 10px #00ffff,
+        0 0 20px #00ffff,
+        0 0 40px #00ffff;
+    margin: 0;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+}
+
+/* Settings Groups */
+.setting-group {
+    margin-bottom: 1rem;
+    text-align: left;
+    width: 100%;
+}
+
+.setting-group label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #00ffff;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+/* Custom Slider */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    outline: none;
+    border: 1px solid #00ffff;
+    margin-top: 5px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ff00ff;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff00ff;
+    transition: transform 0.2s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* Crosshair/Duration Buttons */
+.crosshair-selector, .duration-selector {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.crosshair-btn, .duration-btn {
+    flex: 1;
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid #00ffff;
+    color: #fff;
+    padding: 10px;
+    cursor: pointer;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.3s;
+    text-transform: uppercase;
+}
+
+.crosshair-btn:hover, .duration-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.crosshair-btn.active, .duration-btn.active {
+    background: #00ffff;
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 20px #00ffff;
+}
+
+/* General Buttons */
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+button:not(.crosshair-btn):not(.duration-btn) {
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 900;
+    color: #fff;
+    background: transparent;
+    border: 2px solid #ff00ff;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+button:not(.crosshair-btn):not(.duration-btn):hover {
+    background: #ff00ff;
+    color: #000;
+    box-shadow: 0 0 30px #ff00ff;
+    transform: scale(1.05);
+}
+
+.instructions {
+    margin-top: 20px;
+    color: #888;
+    font-family: monospace;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+/* Stats Display */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    font-size: 1.2rem;
+    color: #00ffff;
+}
+
+.stat-item span {
+    color: #fff;
+    float: right;
+    font-weight: bold;
 }
