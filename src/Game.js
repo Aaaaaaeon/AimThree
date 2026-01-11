@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Target } from './Target.js';
 import { Weapon } from './Weapon.js';
 import { SoundManager } from './SoundManager.js';
+import { CampaignManager } from './CampaignManager.js';
 
 export class Game {
     constructor(container) {
@@ -17,9 +18,22 @@ export class Game {
 
         // Game State
         this.score = 0;
-        this.gameMode = 'static'; // 'static', 'tracking', or 'parkour'
+        this.gameMode = 'static'; // 'static', 'tracking', 'parkour', or 'campaign'
         this.targets = [];
         this.lastSpawnTime = 0;
+
+        // Campaign Mode
+        this.campaignManager = new CampaignManager();
+        this.currentLevelConfig = null;
+        this.campaignLevel = 0;
+
+        // Ammo System (for campaign)
+        this.currentAmmo = 10;
+        this.maxAmmo = 10;
+        this.isReloading = false;
+        this.reloadTime = 2000;
+        this.lastShotTime = 0;
+        this.fireRate = 300;
 
         // Parkour Mode State
         this.parkourPlatforms = [];
@@ -51,6 +65,19 @@ export class Game {
         this.finalAccuracyEl = document.getElementById('final-accuracy');
         this.finalHitsEl = document.getElementById('final-hits');
         this.finalMissesEl = document.getElementById('final-misses');
+
+        // Campaign UI Elements
+        this.campaignMenuEl = document.getElementById('campaign-menu');
+        this.shopMenuEl = document.getElementById('shop-menu');
+        this.levelEndScreenEl = document.getElementById('level-end-screen');
+        this.campaignHudEl = document.getElementById('campaign-hud');
+        this.levelsGridEl = document.getElementById('levels-grid');
+        this.upgradesGridEl = document.getElementById('upgrades-grid');
+        this.cMoneyEl = document.getElementById('c-money');
+        this.cObjectiveEl = document.getElementById('c-objective');
+        this.cTimerEl = document.getElementById('c-timer');
+        this.cAmmoEl = document.getElementById('c-ammo');
+        this.cLevelEl = document.getElementById('c-level');
 
         // Scene
         this.scene = new THREE.Scene();
@@ -175,10 +202,24 @@ export class Game {
             });
         });
 
+        // --- Campaign Menu Listeners ---
+        document.getElementById('btn-campaign').addEventListener('click', () => this.openCampaignMenu());
+        document.getElementById('btn-campaign-back').addEventListener('click', () => this.closeCampaignMenu());
+        document.getElementById('btn-shop').addEventListener('click', () => this.openShop());
+        document.getElementById('btn-shop-back').addEventListener('click', () => this.closeShop());
+        
+        // Level End Screen Listeners
+        document.getElementById('btn-level-retry').addEventListener('click', () => this.retryCampaignLevel());
+        document.getElementById('btn-level-menu').addEventListener('click', () => this.backToCampaignMenu());
+        document.getElementById('btn-level-next').addEventListener('click', () => this.nextCampaignLevel());
+
         // Stop propagation on menus to prevent shooting/locking when clicking UI
-        [this.menuEl, this.pauseEl, this.settingsEl, this.endScreenEl].forEach(el => {
-            el.addEventListener('mousedown', (e) => e.stopPropagation());
-            el.addEventListener('click', (e) => e.stopPropagation());
+        [this.menuEl, this.pauseEl, this.settingsEl, this.endScreenEl, 
+         this.campaignMenuEl, this.shopMenuEl, this.levelEndScreenEl].forEach(el => {
+            if (el) {
+                el.addEventListener('mousedown', (e) => e.stopPropagation());
+                el.addEventListener('click', (e) => e.stopPropagation());
+            }
         });
 
         // Unlock handling (Pause trigger)
@@ -699,6 +740,43 @@ export class Game {
         if (!this.controls.isLocked) return;
         if (this.isPaused || this.isGameOver) return;
 
+        // Campaign mode has special handling
+        if (this.gameMode === 'campaign') {
+            if (!this.handleCampaignShot()) return;
+
+            // Weapon Recoil
+            this.weapon.shoot();
+            this.shotsFired++;
+
+            // Create bullet tracer effect
+            this.createBulletTracer();
+
+            // Play shoot sound
+            this.soundManager.playShoot();
+
+            // Raycast for hit detection
+            this.raycaster.setFromCamera(this.center, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children);
+
+            for (let i = 0; i < intersects.length; i++) {
+                const obj = intersects[i].object;
+                if (obj.userData.target && obj.userData.target.isActive) {
+                    const target = obj.userData.target;
+                    
+                    // Apply damage
+                    target.health -= this.playerDamage;
+                    
+                    if (target.health <= 0) {
+                        target.hit();
+                        this.onCampaignTargetHit(target);
+                    }
+                    break;
+                }
+            }
+            return;
+        }
+
+        // Normal modes
         // Weapon Recoil
         this.weapon.shoot();
         this.shotsFired++;
@@ -739,6 +817,12 @@ export class Game {
                 if (this.canJump === true) {
                     this.velocity.y += 10; // Jump force
                     this.canJump = false;
+                }
+                break;
+            case 'KeyR':
+                // Reload in campaign mode
+                if (this.gameMode === 'campaign' && this.isPlaying && !this.isPaused) {
+                    this.reload();
                 }
                 break;
         }
@@ -792,16 +876,26 @@ export class Game {
         }
 
         // Timer Logic
-        this.timeLeft -= delta;
-        if (this.timeLeft <= 0) {
-            this.timeLeft = 0;
+        if (this.gameMode === 'campaign') {
+            // Campaign mode uses CampaignManager for timing
+            const timeLeft = this.campaignManager.getTimeRemaining();
+            if (timeLeft <= 0) {
+                this.endCampaignLevel(false);
+                return;
+            }
+            this.updateCampaignHUD();
+        } else if (this.gameMode !== 'parkour') {
+            // Normal modes
+            this.timeLeft -= delta;
+            if (this.timeLeft <= 0) {
+                this.timeLeft = 0;
+                this.updateHUD();
+                this.endGame();
+                return;
+            }
+            // Update HUD periodically (every frame is fine for now)
             this.updateHUD();
-            this.endGame();
-            return;
         }
-
-        // Update HUD periodically (every frame is fine for now)
-        this.updateHUD();
 
         // Decoration Animation
         if (this.floatingShapes) {
@@ -951,5 +1045,388 @@ export class Game {
 
         this.animate();
         console.log("Game started");
+    }
+
+    // ============================================
+    // CAMPAIGN MODE METHODS
+    // ============================================
+
+    openCampaignMenu() {
+        this.menuEl.style.display = 'none';
+        this.campaignMenuEl.style.display = 'flex';
+        this.renderLevelsGrid();
+        this.updateCampaignMoney();
+    }
+
+    closeCampaignMenu() {
+        this.campaignMenuEl.style.display = 'none';
+        this.menuEl.style.display = 'flex';
+    }
+
+    updateCampaignMoney() {
+        const money = this.campaignManager.getMoney();
+        document.getElementById('campaign-money').textContent = money;
+        document.getElementById('shop-money').textContent = money;
+    }
+
+    renderLevelsGrid() {
+        const levels = this.campaignManager.getLevelsInfo();
+        this.levelsGridEl.innerHTML = '';
+
+        levels.forEach(level => {
+            const btn = document.createElement('button');
+            btn.className = 'level-btn';
+            
+            if (level.completed) {
+                btn.classList.add('completed', 'unlocked');
+            } else if (level.unlocked) {
+                btn.classList.add('unlocked');
+            } else {
+                btn.classList.add('locked');
+            }
+
+            btn.innerHTML = `
+                <span class="level-num">${level.id}</span>
+                <span class="level-status">${level.completed ? '✓' : level.unlocked ? '▶' : ''}</span>
+            `;
+
+            if (level.unlocked) {
+                btn.addEventListener('click', () => this.startCampaignLevel(level.id));
+            }
+
+            this.levelsGridEl.appendChild(btn);
+        });
+    }
+
+    openShop() {
+        this.campaignMenuEl.style.display = 'none';
+        this.shopMenuEl.style.display = 'flex';
+        this.renderUpgradesGrid();
+    }
+
+    closeShop() {
+        this.shopMenuEl.style.display = 'none';
+        this.campaignMenuEl.style.display = 'flex';
+        this.updateCampaignMoney();
+        this.renderLevelsGrid();
+    }
+
+    renderUpgradesGrid() {
+        const shopInfo = this.campaignManager.getShopInfo();
+        this.upgradesGridEl.innerHTML = '';
+
+        Object.entries(shopInfo.upgrades).forEach(([key, upgrade]) => {
+            const btn = document.createElement('button');
+            btn.className = 'upgrade-btn';
+            
+            if (upgrade.isMaxed) {
+                btn.classList.add('maxed');
+            } else if (!upgrade.canAfford) {
+                btn.classList.add('disabled');
+            }
+
+            // Create level pips
+            let pipsHtml = '';
+            for (let i = 0; i < upgrade.maxLevel; i++) {
+                pipsHtml += `<div class="level-pip ${i < upgrade.currentLevel ? 'filled' : ''}"></div>`;
+            }
+
+            // Value display
+            let valueText = '';
+            if (key === 'fireRate' || key === 'reloadSpeed') {
+                valueText = `${(upgrade.currentValue / 1000).toFixed(1)}s`;
+                if (upgrade.nextValue) {
+                    valueText += ` → <span class="next-value">${(upgrade.nextValue / 1000).toFixed(1)}s</span>`;
+                }
+            } else {
+                valueText = upgrade.currentValue;
+                if (upgrade.nextValue) {
+                    valueText += ` → <span class="next-value">${upgrade.nextValue}</span>`;
+                }
+            }
+
+            btn.innerHTML = `
+                <div class="upgrade-info">
+                    <div class="upgrade-name">${upgrade.icon} ${upgrade.name}</div>
+                    <div class="upgrade-level">${pipsHtml}</div>
+                    <div class="upgrade-value">${valueText}</div>
+                </div>
+                <div class="upgrade-cost ${upgrade.isMaxed ? 'maxed' : !upgrade.canAfford ? 'cant-afford' : ''}">
+                    ${upgrade.isMaxed ? 'MAX' : `${upgrade.cost}$`}
+                </div>
+            `;
+
+            if (!upgrade.isMaxed && upgrade.canAfford) {
+                btn.addEventListener('click', () => {
+                    if (this.campaignManager.purchaseUpgrade(key)) {
+                        this.soundManager.playHit();
+                        this.updateCampaignMoney();
+                        this.renderUpgradesGrid();
+                    }
+                });
+            }
+
+            this.upgradesGridEl.appendChild(btn);
+        });
+    }
+
+    startCampaignLevel(levelId) {
+        this.campaignLevel = levelId;
+        this.currentLevelConfig = this.campaignManager.startLevel(levelId);
+        
+        if (!this.currentLevelConfig) return;
+
+        // Apply player stats
+        const stats = this.campaignManager.getPlayerStats();
+        this.fireRate = stats.fireRate;
+        this.maxAmmo = stats.magSize;
+        this.currentAmmo = this.maxAmmo;
+        this.reloadTime = stats.reloadSpeed;
+        this.playerDamage = stats.damage;
+
+        this.gameMode = 'campaign';
+        this.isPlaying = true;
+        this.isPaused = false;
+        this.isGameOver = false;
+        this.isReloading = false;
+        this.lastShotTime = 0;
+
+        // Hide all menus
+        this.campaignMenuEl.style.display = 'none';
+        this.menuEl.style.display = 'none';
+        this.pauseEl.style.display = 'none';
+        this.settingsEl.style.display = 'none';
+        this.endScreenEl.style.display = 'none';
+        this.levelEndScreenEl.style.display = 'none';
+
+        // Show campaign HUD
+        this.hudEl.style.display = 'none';
+        this.campaignHudEl.style.display = 'flex';
+        this.crosshairEl.style.display = 'block';
+
+        // Reset game state
+        this.score = 0;
+        this.shotsFired = 0;
+        this.shotsHit = 0;
+        
+        // Clear existing targets
+        this.targets.forEach(t => t.despawn());
+
+        // Reset camera
+        this.camera.position.set(0, 1.6, 0);
+        this.velocity.set(0, 0, 0);
+
+        // Start
+        this.clock.start();
+        this.controls.lock();
+        
+        this.soundManager.init();
+        this.soundManager.playGameStart();
+
+        // Update HUD
+        this.updateCampaignHUD();
+
+        // Spawn first targets
+        this.spawnCampaignTargets();
+    }
+
+    spawnCampaignTargets() {
+        if (!this.currentLevelConfig || !this.isPlaying) return;
+
+        const config = this.currentLevelConfig;
+        const activeTargets = this.targets.filter(t => t.isActive).length;
+
+        if (activeTargets < config.maxTargetsAtOnce) {
+            const toSpawn = config.maxTargetsAtOnce - activeTargets;
+            for (let i = 0; i < toSpawn; i++) {
+                this.spawnSingleCampaignTarget();
+            }
+        }
+    }
+
+    spawnSingleCampaignTarget() {
+        const config = this.currentLevelConfig;
+        
+        let target = this.targets.find(t => !t.isActive);
+        if (!target) {
+            target = new Target(this.scene);
+            this.targets.push(target);
+        }
+
+        const x = (Math.random() - 0.5) * 15;
+        const y = 1 + Math.random() * 4;
+        const z = -5 - Math.random() * 15;
+
+        // Set target health based on level config
+        target.maxHealth = config.targetHealth;
+        target.health = config.targetHealth;
+
+        // Determine if target should move
+        let speed = 0;
+        if (config.type === 'moving_slow') {
+            speed = config.targetSpeed;
+        } else if (config.type === 'moving_fast') {
+            speed = config.targetSpeed;
+        } else if (config.type === 'mixed') {
+            speed = Math.random() > config.staticRatio ? config.targetSpeed : 0;
+        } else if (config.type === 'chaos') {
+            speed = config.targetSpeed + (Math.random() - 0.5) * config.speedVariation * 2;
+        }
+
+        target.moveSpeed = speed;
+        target.spawn(new THREE.Vector3(x, y, z));
+    }
+
+    updateCampaignHUD() {
+        if (!this.currentLevelConfig) return;
+
+        const config = this.currentLevelConfig;
+        const kills = this.campaignManager.killCount;
+        const timeLeft = this.campaignManager.getTimeRemaining();
+        const moneyEarned = this.campaignManager.moneyEarned;
+
+        this.cMoneyEl.textContent = `💰 ${moneyEarned}$`;
+        this.cObjectiveEl.textContent = `🎯 ${kills}/${config.targetCount}`;
+        this.cTimerEl.textContent = `⏱️ ${timeLeft}s`;
+        this.cAmmoEl.textContent = this.isReloading ? '🔫 ...' : `🔫 ${this.currentAmmo}/${this.maxAmmo}`;
+        this.cLevelEl.textContent = `Niv. ${this.campaignLevel}`;
+
+        // Timer warnings
+        this.cTimerEl.classList.remove('warning', 'critical');
+        if (timeLeft <= 10) {
+            this.cTimerEl.classList.add('critical');
+        } else if (timeLeft <= 20) {
+            this.cTimerEl.classList.add('warning');
+        }
+
+        // Ammo warnings
+        this.cAmmoEl.classList.remove('reloading', 'empty');
+        if (this.isReloading) {
+            this.cAmmoEl.classList.add('reloading');
+        } else if (this.currentAmmo === 0) {
+            this.cAmmoEl.classList.add('empty');
+        }
+    }
+
+    reload() {
+        if (this.isReloading || this.currentAmmo === this.maxAmmo) return;
+
+        this.isReloading = true;
+        this.updateCampaignHUD();
+
+        setTimeout(() => {
+            this.currentAmmo = this.maxAmmo;
+            this.isReloading = false;
+            this.updateCampaignHUD();
+        }, this.reloadTime);
+    }
+
+    handleCampaignShot() {
+        const now = Date.now();
+
+        // Check fire rate
+        if (now - this.lastShotTime < this.fireRate) return false;
+
+        // Check ammo
+        if (this.currentAmmo <= 0 || this.isReloading) {
+            if (!this.isReloading) this.reload();
+            return false;
+        }
+
+        this.currentAmmo--;
+        this.lastShotTime = now;
+        this.campaignManager.registerShot(false);
+
+        // Auto-reload when empty
+        if (this.currentAmmo === 0) {
+            this.reload();
+        }
+
+        this.updateCampaignHUD();
+        return true;
+    }
+
+    onCampaignTargetHit(target) {
+        const result = this.campaignManager.registerKill();
+        this.campaignManager.registerShot(true);
+        this.shotsHit++;
+
+        this.soundManager.playHit();
+        this.updateCampaignHUD();
+
+        // Check win condition
+        if (this.campaignManager.checkLevelComplete()) {
+            this.endCampaignLevel(true);
+            return;
+        }
+
+        // Spawn replacement target
+        setTimeout(() => this.spawnCampaignTargets(), 500);
+    }
+
+    endCampaignLevel(victory) {
+        this.isPlaying = false;
+        this.isGameOver = true;
+        this.controls.unlock();
+        this.clock.stop();
+
+        const result = this.campaignManager.endLevel(victory);
+
+        // Hide HUD
+        this.campaignHudEl.style.display = 'none';
+        this.crosshairEl.style.display = 'none';
+
+        // Show level end screen
+        this.levelEndScreenEl.style.display = 'flex';
+        this.levelEndScreenEl.classList.remove('victory', 'defeat');
+        this.levelEndScreenEl.classList.add(victory ? 'victory' : 'defeat');
+
+        // Update UI
+        document.getElementById('level-end-title').textContent = victory ? 'VICTOIRE !' : 'DÉFAITE';
+        document.getElementById('level-end-name').textContent = result.levelName;
+        document.getElementById('level-kills').textContent = result.kills;
+        document.getElementById('level-target').textContent = result.targetCount;
+        document.getElementById('level-accuracy').textContent = `${result.accuracy}%`;
+        document.getElementById('level-money').textContent = `+${result.moneyEarned}$`;
+        document.getElementById('level-total-money').textContent = `${result.totalMoney}$`;
+
+        // Show/hide next level button
+        const nextBtn = document.getElementById('btn-level-next');
+        const unlockMsg = document.getElementById('level-unlock-msg');
+        
+        if (victory && result.nextLevelUnlocked) {
+            nextBtn.style.display = 'block';
+            unlockMsg.style.display = 'block';
+        } else if (victory && this.campaignLevel < 10) {
+            nextBtn.style.display = 'block';
+            unlockMsg.style.display = 'none';
+        } else {
+            nextBtn.style.display = 'none';
+            unlockMsg.style.display = 'none';
+        }
+
+        this.soundManager.playGameOver();
+    }
+
+    retryCampaignLevel() {
+        this.levelEndScreenEl.style.display = 'none';
+        this.startCampaignLevel(this.campaignLevel);
+    }
+
+    nextCampaignLevel() {
+        this.levelEndScreenEl.style.display = 'none';
+        if (this.campaignLevel < 10) {
+            this.startCampaignLevel(this.campaignLevel + 1);
+        }
+    }
+
+    backToCampaignMenu() {
+        this.levelEndScreenEl.style.display = 'none';
+        this.campaignHudEl.style.display = 'none';
+        
+        // Clear targets
+        this.targets.forEach(t => t.despawn());
+        
+        this.openCampaignMenu();
     }
 }

@@ -5,6 +5,10 @@ export class Target {
         this.scene = scene;
         this.isActive = false;
         
+        // Health system (for campaign mode)
+        this.maxHealth = 25;
+        this.health = 25;
+        
         // Neon Target (Solid Red unlit for max visibility)
         const geometry = new THREE.SphereGeometry(0.5, 32, 32);
         const material = new THREE.MeshBasicMaterial({ 
@@ -31,6 +35,9 @@ export class Target {
         this.isActive = true;
         this.mesh.material.color.setHex(0xff0000); // Reset color
         
+        // Reset health
+        this.health = this.maxHealth;
+        
         // Random initial direction for tracking
         this.setRandomDirection();
     }
@@ -56,7 +63,10 @@ export class Target {
     update(delta, mode) {
         if (!this.isActive) return;
 
-        if (mode === 'tracking') {
+        // Move if moveSpeed > 0 (campaign mode uses this)
+        const shouldMove = mode === 'tracking' || mode === 'campaign' && this.moveSpeed > 0;
+
+        if (shouldMove && this.moveSpeed > 0) {
             // Move target
             this.mesh.position.addScaledVector(this.moveDirection, this.moveSpeed * delta);
 
@@ -81,3 +91,4 @@ export class Target {
         }
     }
 }
+

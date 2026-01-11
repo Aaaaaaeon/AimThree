@@ -8,6 +8,7 @@
   </head>
   <body>
     <div id="ui-layer">
+      <!-- Menu Principal -->
       <div id="main-menu">
         <div class="menu-content">
             <h1>AIM THREE</h1>
@@ -22,15 +23,75 @@
             </div>
 
             <div class="menu-buttons">
+                <button id="btn-campaign" class="btn-primary">🎮 CAMPAGNE</button>
                 <button id="btn-static">MODE RÉFLEXE</button>
                 <button id="btn-tracking">MODE TRACKING</button>
                 <button id="btn-parkour">MODE PARKOUR</button>
                 <button id="btn-settings-main">PARAMÈTRES</button>
             </div>
-            <p class="instructions">ZQSD Déplacer • MAJ Sprinter • ESPACE Sauter</p>
+            <p class="instructions">ZQSD Déplacer • MAJ Sprinter • ESPACE Sauter • R Recharger</p>
         </div>
       </div>
 
+      <!-- Menu Campagne -->
+      <div id="campaign-menu" style="display: none;">
+        <div class="menu-content campaign-content">
+            <h1>🎮 CAMPAGNE</h1>
+            <div class="campaign-money">💰 <span id="campaign-money">0</span>$</div>
+            
+            <div class="levels-grid" id="levels-grid">
+                <!-- Généré dynamiquement -->
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-shop">🛒 BOUTIQUE</button>
+                <button id="btn-campaign-back">RETOUR</button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Menu Boutique -->
+      <div id="shop-menu" style="display: none;">
+        <div class="menu-content shop-content">
+            <h1>🛒 BOUTIQUE</h1>
+            <div class="shop-money">💰 <span id="shop-money">0</span>$</div>
+            
+            <div class="upgrades-grid" id="upgrades-grid">
+                <!-- Généré dynamiquement -->
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-shop-back">RETOUR</button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Écran de fin de niveau (Campagne) -->
+      <div id="level-end-screen" style="display: none;">
+        <div class="menu-content">
+            <h1 id="level-end-title">NIVEAU TERMINÉ</h1>
+            <h2 id="level-end-name">Échauffement</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-item">CIBLES <span id="level-kills">0</span>/<span id="level-target">0</span></div>
+                <div class="stat-item">PRÉCISION <span id="level-accuracy">0%</span></div>
+                <div class="stat-item">GAINS <span id="level-money">+0$</span></div>
+                <div class="stat-item">TOTAL <span id="level-total-money">0$</span></div>
+            </div>
+
+            <div id="level-unlock-msg" class="unlock-message" style="display: none;">
+                🔓 Niveau suivant débloqué !
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btn-level-next" style="display: none;">NIVEAU SUIVANT</button>
+                <button id="btn-level-retry">RÉESSAYER</button>
+                <button id="btn-level-menu">MENU CAMPAGNE</button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Écran de fin classique -->
       <div id="end-screen" style="display: none;">
         <div class="menu-content">
             <h1>FIN DE PARTIE</h1>
@@ -49,6 +110,7 @@
         </div>
       </div>
 
+      <!-- Menu Pause -->
       <div id="pause-menu" style="display: none;">
         <div class="menu-content">
             <h1>PAUSE</h1>
@@ -60,6 +122,7 @@
         </div>
     </div>
 
+    <!-- Menu Paramètres -->
     <div id="settings-menu" style="display: none;">
         <div class="menu-content">
             <h1>PARAMÈTRES</h1>
@@ -84,16 +147,27 @@
         </div>
     </div>
 
+      <!-- Crosshair -->
       <div id="crosshair" style="display: none;"></div>
+      
+      <!-- HUD Classique -->
       <div id="hud" style="display: none;">
         <div id="score">Score : 0</div>
         <div id="timer">Temps : 0s</div>
         <div id="hits">Touchés : 0</div>
         <div id="height" style="display: none;">Hauteur : 0m</div>
       </div>
+
+      <!-- HUD Campagne -->
+      <div id="campaign-hud" style="display: none;">
+        <div id="c-money">💰 0$</div>
+        <div id="c-objective">🎯 0/0</div>
+        <div id="c-timer">⏱️ 0s</div>
+        <div id="c-ammo">🔫 0/0</div>
+        <div id="c-level">Niv. 1</div>
+      </div>
     </div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
-

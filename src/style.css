@@ -99,7 +99,10 @@ html {
 #pause-menu,
 #settings-menu,
 #main-menu,
-#end-screen {
+#end-screen,
+#campaign-menu,
+#shop-menu,
+#level-end-screen {
     position: absolute;
     top: 0;
     left: 0;
@@ -238,7 +241,7 @@ input[type=range]::-webkit-slider-thumb:hover {
     width: 100%;
 }
 
-button:not(.crosshair-btn):not(.duration-btn) {
+button:not(.crosshair-btn):not(.duration-btn):not(.level-btn):not(.upgrade-btn) {
     padding: 15px 30px;
     font-size: 1.5rem;
     font-family: 'Segoe UI', sans-serif;
@@ -253,11 +256,25 @@ button:not(.crosshair-btn):not(.duration-btn) {
     transition: all 0.3s ease;
 }
 
-button:not(.crosshair-btn):not(.duration-btn):hover {
+button:not(.crosshair-btn):not(.duration-btn):not(.level-btn):not(.upgrade-btn):hover {
     background: #ff00ff;
     color: #000;
     box-shadow: 0 0 30px #ff00ff;
     transform: scale(1.05);
+}
+
+/* Primary Button (Campaign) */
+.btn-primary {
+    background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%) !important;
+    border: none !important;
+    color: #000 !important;
+    font-weight: 900 !important;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5) !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #00ffff 0%, #ff00ff 100%) !important;
+    transform: scale(1.08) !important;
 }
 
 .instructions {
@@ -304,4 +321,301 @@ button:not(.crosshair-btn):not(.duration-btn):hover {
 .parkour-win .menu-content {
     border-color: #00ff88;
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+/* ============================================
+   CAMPAIGN MODE STYLES
+   ============================================ */
+
+/* Campaign Money Display */
+.campaign-money,
+.shop-money {
+    font-size: 2rem;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Campaign Content (wider) */
+.campaign-content,
+.shop-content {
+    min-width: 600px;
+    max-width: 700px;
+}
+
+/* Levels Grid */
+.levels-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.level-btn {
+    aspect-ratio: 1;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #333;
+    border-radius: 10px;
+    color: #666;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: not-allowed;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.level-btn .level-num {
+    font-size: 1.8rem;
+}
+
+.level-btn .level-status {
+    font-size: 0.8rem;
+}
+
+/* Unlocked Level */
+.level-btn.unlocked {
+    border-color: #00ffff;
+    color: #00ffff;
+    cursor: pointer;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.level-btn.unlocked:hover {
+    background: rgba(0, 255, 255, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+/* Completed Level */
+.level-btn.completed {
+    border-color: #00ff88;
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.level-btn.completed:hover {
+    background: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+}
+
+/* Locked Level */
+.level-btn.locked {
+    opacity: 0.5;
+}
+
+.level-btn.locked .level-num::after {
+    content: '🔒';
+    font-size: 1rem;
+    margin-left: 5px;
+}
+
+/* Upgrades Grid */
+.upgrades-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.upgrade-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upgrade-btn:hover:not(.maxed):not(.disabled) {
+    background: rgba(0, 255, 255, 0.2);
+    transform: scale(1.02);
+}
+
+.upgrade-btn.disabled {
+    border-color: #666;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.upgrade-btn.maxed {
+    border-color: #00ff88;
+    cursor: default;
+}
+
+.upgrade-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.upgrade-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #00ffff;
+}
+
+.upgrade-level {
+    display: flex;
+    gap: 5px;
+}
+
+.upgrade-level .level-pip {
+    width: 20px;
+    height: 8px;
+    background: #333;
+    border-radius: 2px;
+}
+
+.upgrade-level .level-pip.filled {
+    background: linear-gradient(90deg, #00ffff, #ff00ff);
+}
+
+.upgrade-value {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.upgrade-value .next-value {
+    color: #00ff88;
+}
+
+.upgrade-cost {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffd700;
+    padding: 8px 15px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 5px;
+}
+
+.upgrade-cost.cant-afford {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.upgrade-cost.maxed {
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+}
+
+/* Campaign HUD */
+#campaign-hud {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 30px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    font-family: 'Segoe UI', monospace;
+    pointer-events: none;
+    z-index: 100;
+}
+
+#campaign-hud > div {
+    padding: 8px 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+}
+
+#c-money {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+#c-objective {
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+#c-timer {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+#c-timer.warning {
+    color: #ffaa00;
+    animation: pulse 0.5s infinite;
+}
+
+#c-timer.critical {
+    color: #ff4444;
+    animation: pulse 0.3s infinite;
+}
+
+#c-ammo {
+    color: #ff00ff;
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+#c-ammo.reloading {
+    color: #ffaa00;
+    animation: pulse 0.3s infinite;
+}
+
+#c-ammo.empty {
+    color: #ff4444;
+}
+
+#c-level {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Level End Screen */
+#level-end-screen h2 {
+    font-size: 1.5rem;
+    color: #888;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.unlock-message {
+    font-size: 1.3rem;
+    color: #00ff88;
+    text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    padding: 15px;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid #00ff88;
+    border-radius: 8px;
+    animation: pulse 1s infinite;
+}
+
+/* Victory Screen */
+#level-end-screen.victory h1 {
+    color: #00ff88;
+    text-shadow: 0 0 20px #00ff88;
+}
+
+#level-end-screen.victory .menu-content {
+    border-color: #00ff88;
+}
+
+/* Defeat Screen */
+#level-end-screen.defeat h1 {
+    color: #ff4444;
+    text-shadow: 0 0 20px #ff4444;
+}
+
+#level-end-screen.defeat .menu-content {
+    border-color: #ff4444;
 }
