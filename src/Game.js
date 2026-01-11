@@ -215,7 +215,7 @@ export class Game {
             this.scoreEl.style.display = 'none';
             this.hitsEl.style.display = 'none';
             this.heightEl.style.display = 'block';
-            this.timeEl.textContent = 'Time: 0s';
+            this.timeEl.textContent = 'Temps : 0s';
         } else {
             this.scoreEl.style.display = 'block';
             this.hitsEl.style.display = 'block';
@@ -282,9 +282,9 @@ export class Game {
     }
 
     updateHUD() {
-        if (this.scoreEl) this.scoreEl.textContent = `Score: ${Math.floor(this.score)}`;
-        if (this.timeEl) this.timeEl.textContent = `Time: ${Math.ceil(this.timeLeft)}s`;
-        if (this.hitsEl) this.hitsEl.textContent = `Hits: ${this.shotsHit}`;
+        if (this.scoreEl) this.scoreEl.textContent = `Score : ${Math.floor(this.score)}`;
+        if (this.timeEl) this.timeEl.textContent = `Temps : ${Math.ceil(this.timeLeft)}s`;
+        if (this.hitsEl) this.hitsEl.textContent = `Touchés : ${this.shotsHit}`;
     }
 
     pauseGame() {
@@ -504,12 +504,12 @@ export class Game {
 
         // Update stats for parkour win
         this.finalScoreEl.textContent = `${completionTime}s`;
-        this.finalAccuracyEl.textContent = 'COMPLETE';
+        this.finalAccuracyEl.textContent = 'TERMINÉ';
         this.finalHitsEl.textContent = '-';
         this.finalMissesEl.textContent = '-';
 
         // Update labels temporarily
-        document.querySelector('.stat-item:first-child').innerHTML = `TIME <span id="final-score">${completionTime}s</span>`;
+        document.querySelector('.stat-item:first-child').innerHTML = `TEMPS <span id="final-score">${completionTime}s</span>`;
 
         this.soundManager.playGameOver(); // Could add a win sound instead
     }
@@ -686,12 +686,12 @@ export class Game {
 
 
     updateScoreUI() {
-        this.scoreEl.textContent = `Score: ${Math.floor(this.score)}`;
+        this.scoreEl.textContent = `Score : ${Math.floor(this.score)}`;
     }
 
     setMode(mode) {
         this.gameMode = mode;
-        this.modeEl.textContent = `Mode: ${mode === 'static' ? 'Static (Reflex)' : 'Tracking'}`;
+        this.modeEl.textContent = `Mode : ${mode === 'static' ? 'Réflexe' : 'Tracking'}`;
         this.resetGame();
     }
 
@@ -894,7 +894,7 @@ export class Game {
                 // Update height display
                 if (this.heightEl) {
                     const height = Math.max(0, Math.floor(this.camera.position.y - this.startPlatformY));
-                    this.heightEl.textContent = `Height: ${height}m`;
+                    this.heightEl.textContent = `Hauteur : ${height}m`;
                 }
             } else {
                 // Normal ground check for other modes
@@ -918,7 +918,7 @@ export class Game {
         // Parkour mode: update elapsed time
         if (this.gameMode === 'parkour') {
             const elapsed = Math.floor((Date.now() - this.parkourStartTime) / 1000);
-            if (this.timeEl) this.timeEl.textContent = `Time: ${elapsed}s`;
+            if (this.timeEl) this.timeEl.textContent = `Temps : ${elapsed}s`;
         }
 
         // Game Mode Logic

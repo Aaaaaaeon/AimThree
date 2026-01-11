@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -13,7 +13,7 @@
             <h1>AIM THREE</h1>
             
             <div class="setting-group" style="text-align: center;">
-                <label style="justify-content: center;">DURATION</label>
+                <label style="justify-content: center;">DURÉE</label>
                 <div class="duration-selector">
                     <button class="duration-btn" data-time="30">30s</button>
                     <button class="duration-btn active" data-time="60">60s</button>
@@ -22,77 +22,78 @@
             </div>
 
             <div class="menu-buttons">
-                <button id="btn-static">REFLEX MODE</button>
-                <button id="btn-tracking">TRACKING MODE</button>
-                <button id="btn-parkour">PARKOUR MODE</button>
-                <button id="btn-settings-main">SETTINGS</button>
+                <button id="btn-static">MODE RÉFLEXE</button>
+                <button id="btn-tracking">MODE TRACKING</button>
+                <button id="btn-parkour">MODE PARKOUR</button>
+                <button id="btn-settings-main">PARAMÈTRES</button>
             </div>
-            <p class="instructions">WASD Move • SHIFT Sprint • SPACE Jump</p>
+            <p class="instructions">ZQSD Déplacer • MAJ Sprinter • ESPACE Sauter</p>
         </div>
       </div>
 
       <div id="end-screen" style="display: none;">
         <div class="menu-content">
-            <h1>GAME OVER</h1>
+            <h1>FIN DE PARTIE</h1>
             
             <div class="stats-grid">
                 <div class="stat-item">SCORE <span id="final-score">0</span></div>
-                <div class="stat-item">ACCURACY <span id="final-accuracy">0%</span></div>
-                <div class="stat-item">HITS <span id="final-hits">0</span></div>
-                <div class="stat-item">MISSES <span id="final-misses">0</span></div>
+                <div class="stat-item">PRÉCISION <span id="final-accuracy">0%</span></div>
+                <div class="stat-item">TOUCHÉS <span id="final-hits">0</span></div>
+                <div class="stat-item">RATÉS <span id="final-misses">0</span></div>
             </div>
 
             <div class="menu-buttons">
-                <button id="btn-retry">RETRY</button>
-                <button id="btn-restart">MAIN MENU</button>
+                <button id="btn-retry">RÉESSAYER</button>
+                <button id="btn-restart">MENU PRINCIPAL</button>
             </div>
         </div>
       </div>
 
       <div id="pause-menu" style="display: none;">
         <div class="menu-content">
-            <h1>PAUSED</h1>
+            <h1>PAUSE</h1>
             <div class="menu-buttons">
-                <button id="btn-resume">RESUME</button>
-                <button id="btn-settings-pause">SETTINGS</button>
-                <button id="btn-quit">MAIN MENU</button>
+                <button id="btn-resume">REPRENDRE</button>
+                <button id="btn-settings-pause">PARAMÈTRES</button>
+                <button id="btn-quit">MENU PRINCIPAL</button>
             </div>
         </div>
     </div>
 
     <div id="settings-menu" style="display: none;">
         <div class="menu-content">
-            <h1>SETTINGS</h1>
+            <h1>PARAMÈTRES</h1>
             
             <div class="setting-group">
-                <label>SENSITIVITY <span id="sens-value">1.0</span></label>
+                <label>SENSIBILITÉ <span id="sens-value">1.0</span></label>
                 <input type="range" id="sens-slider" min="0.1" max="3.0" step="0.1" value="1.0">
             </div>
 
             <div class="setting-group">
-                <label>CROSSHAIR STYLE</label>
+                <label>STYLE DE VISEUR</label>
                 <div class="crosshair-selector">
-                    <button class="crosshair-btn" data-style="dot">DOT</button>
-                    <button class="crosshair-btn" data-style="cross">CROSS</button>
-                    <button class="crosshair-btn" data-style="circle">CIRCLE</button>
+                    <button class="crosshair-btn" data-style="dot">POINT</button>
+                    <button class="crosshair-btn" data-style="cross">CROIX</button>
+                    <button class="crosshair-btn" data-style="circle">CERCLE</button>
                 </div>
             </div>
 
             <div class="menu-buttons">
-                <button id="btn-back">BACK</button>
+                <button id="btn-back">RETOUR</button>
             </div>
         </div>
     </div>
 
       <div id="crosshair" style="display: none;"></div>
       <div id="hud" style="display: none;">
-        <div id="score">Score: 0</div>
-        <div id="timer">Time: 0s</div>
-        <div id="hits">Hits: 0</div>
-        <div id="height" style="display: none;">Height: 0m</div>
+        <div id="score">Score : 0</div>
+        <div id="timer">Temps : 0s</div>
+        <div id="hits">Touchés : 0</div>
+        <div id="height" style="display: none;">Hauteur : 0m</div>
       </div>
     </div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
+
