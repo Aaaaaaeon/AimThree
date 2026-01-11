@@ -1,0 +1,49 @@
+{
+  "static": [
+    {
+      "pseudo": "Encore+Pro",
+      "score": 6100,
+      "accuracy": "88.4",
+      "date": "2026-01-11T21:34:24.223Z"
+    },
+    {
+      "pseudo": "Le pro",
+      "score": 5400,
+      "accuracy": "83.1",
+      "date": "2026-01-11T21:33:38.691Z"
+    },
+    {
+      "pseudo": "Aeon",
+      "score": 5200,
+      "accuracy": "82.5",
+      "date": "2026-01-11T21:17:41.411Z"
+    },
+    {
+      "pseudo": "Aeon",
+      "score": 4800,
+      "accuracy": "75.0",
+      "date": "2026-01-11T21:13:37.033Z"
+    },
+    {
+      "pseudo": "TestPlayer",
+      "score": 1500,
+      "accuracy": "85.5",
+      "date": "2026-01-11T20:00:00.000Z"
+    }
+  ],
+  "tracking": [
+    {
+      "pseudo": "Soldat 76",
+      "score": 1944,
+      "accuracy": 0,
+      "date": "2026-01-11T21:35:57.496Z"
+    },
+    {
+      "pseudo": "Jack Frost",
+      "score": 1653,
+      "accuracy": 0,
+      "date": "2026-01-11T21:35:06.673Z"
+    }
+  ],
+  "parkour": []
+}

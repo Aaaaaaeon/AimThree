@@ -1,272 +1,292 @@
 /**
  * Configuration des 10 niveaux de la campagne
+ * Équilibrage : progression TRÈS lente, récompenses faibles
  */
 
 export const LEVEL_CONFIGS = [
-    // Niveau 1 - Tutoriel statique
+    // Niveau 1 - Tutoriel
     {
         id: 1,
-        name: "Échauffement",
-        description: "Cibles statiques - Apprenez les bases",
+        name: "Initiation",
+        description: "Apprenez les bases du tir",
         type: "static",
-        targetCount: 15,
-        timeLimit: 45,
-        targetHealth: 25,
+        targetCount: 12,
+        timeLimit: 30, // -10s
+        targetHealth: 30,
         targetSpeed: 0,
-        spawnInterval: 1500,
+        spawnInterval: 1800,
+        maxTargetsAtOnce: 2,
+        hasBombs: false,
+        hasObstacles: false,
+        bombChance: 0,
+        reward: {
+            perKill: 3,
+            completion: 20,
+            accuracyBonus: 10
+        },
+        hazards: { count: 0, speed: 0, damage: 0 }
+    },
+    // Niveau 2 - Endurance
+    {
+        id: 2,
+        name: "Endurance",
+        description: "Esquivez les missiles !",
+        type: "static",
+        targetCount: 20,
+        timeLimit: 35, // -10s
+        targetHealth: 40,
+        targetSpeed: 0,
+        spawnInterval: 1400,
         maxTargetsAtOnce: 3,
         hasBombs: false,
         hasObstacles: false,
         bombChance: 0,
         reward: {
-            perKill: 10,
-            completion: 100,
-            accuracyBonus: 50
-        }
+            perKill: 3,
+            completion: 25,
+            accuracyBonus: 15
+        },
+        hazards: { count: 1, speed: 1.5, damage: 10 }
     },
-    // Niveau 2 - Plus de cibles statiques
+    // Niveau 3 - Tailles variables
     {
-        id: 2,
-        name: "Concentration",
-        description: "Plus de cibles, même temps",
+        id: 3,
+        name: "Perspectives",
+        description: "Esquivez les projectiles !",
         type: "static",
-        targetCount: 25,
-        timeLimit: 45,
-        targetHealth: 35,
+        targetCount: 20,
+        timeLimit: 45, // -10s
+        targetHealth: 40,
         targetSpeed: 0,
+        spawnInterval: 1300,
+        maxTargetsAtOnce: 4,
+        variableSize: true,
+        minScale: 0.4,
+        maxScale: 1.8,
+        hasBombs: false,
+        hasObstacles: false,
+        bombChance: 0,
+        reward: {
+            perKill: 4,
+            completion: 35,
+            accuracyBonus: 18
+        },
+        hazards: { count: 2, speed: 2.0, damage: 15 }
+    },
+    // Niveau 4 - Mouvement lent
+    {
+        id: 4,
+        name: "Traque",
+        description: "Attention aux tirs ennemis !",
+        type: "moving_slow",
+        targetCount: 22,
+        timeLimit: 45, // -10s
+        targetHealth: 50,
+        targetSpeed: 2,
         spawnInterval: 1200,
         maxTargetsAtOnce: 4,
         hasBombs: false,
         hasObstacles: false,
         bombChance: 0,
         reward: {
-            perKill: 20,
-            completion: 200,
-            accuracyBonus: 100
-        }
+            perKill: 4,
+            completion: 45,
+            accuracyBonus: 20
+        },
+        hazards: { count: 3, speed: 2.2, damage: 15 }
     },
-    // Niveau 3 - Mouvement lent
+    // Niveau 5 - Éphémères + Bombes
     {
-        id: 3,
-        name: "Premiers Pas",
-        description: "Les cibles commencent à bouger",
-        type: "moving_slow",
-        targetCount: 20,
-        timeLimit: 50,
-        targetHealth: 40,
-        targetSpeed: 1.5,
+        id: 5,
+        name: "Champ de Mines",
+        description: "Bombes + Missiles !",
+        type: "ephemeral",
+        targetCount: 22,
+        timeLimit: 45, // -15s
+        targetHealth: 35,
+        targetSpeed: 0,
+        spawnInterval: 800,
+        maxTargetsAtOnce: 5,
+        ephemeralDuration: 1.8,
+        hasBombs: true,
+        hasObstacles: false,
+        bombChance: 0.25,
+        bombInstantLoss: true,
+        reward: {
+            perKill: 5,
+            completion: 60,
+            accuracyBonus: 30
+        },
+        hazards: { count: 4, speed: 2.5, damage: 20 }
+    },
+    // Niveau 6 - Vitesse
+    {
+        id: 6,
+        name: "Poursuite",
+        description: "Survivre aux vagues de missiles",
+        type: "moving_fast",
+        targetCount: 22,
+        timeLimit: 45, // -10s
+        targetHealth: 60,
+        targetSpeed: 4.5,
         spawnInterval: 1300,
         maxTargetsAtOnce: 4,
         hasBombs: false,
         hasObstacles: false,
         bombChance: 0,
         reward: {
-            perKill: 30,
-            completion: 300,
-            accuracyBonus: 150
-        }
+            perKill: 5,
+            completion: 65,
+            accuracyBonus: 35
+        },
+        hazards: { count: 5, speed: 3.0, damage: 20 }
     },
-    // Niveau 4 - Introduction des bombes
-    {
-        id: 4,
-        name: "Attention Danger",
-        description: "Ne tirez pas sur les bombes !",
-        type: "static",
-        targetCount: 25,
-        timeLimit: 50,
-        targetHealth: 40,
-        targetSpeed: 0,
-        spawnInterval: 1200,
-        maxTargetsAtOnce: 5,
-        hasBombs: true,
-        hasObstacles: false,
-        bombChance: 0.2,
-        bombPenalty: 50,
-        reward: {
-            perKill: 30,
-            completion: 350,
-            accuracyBonus: 175
-        }
-    },
-    // Niveau 5 - Obstacles
-    {
-        id: 5,
-        name: "Labyrinthe",
-        description: "Des obstacles bloquent vos tirs",
-        type: "static",
-        targetCount: 30,
-        timeLimit: 55,
-        targetHealth: 50,
-        targetSpeed: 0,
-        spawnInterval: 1100,
-        maxTargetsAtOnce: 5,
-        hasBombs: false,
-        hasObstacles: true,
-        obstacleCount: 5,
-        bombChance: 0,
-        reward: {
-            perKill: 40,
-            completion: 400,
-            accuracyBonus: 200
-        }
-    },
-    // Niveau 6 - Mouvement rapide
-    {
-        id: 6,
-        name: "Réflexes",
-        description: "Cibles rapides - Restez concentré",
-        type: "moving_fast",
-        targetCount: 25,
-        timeLimit: 50,
-        targetHealth: 55,
-        targetSpeed: 4,
-        spawnInterval: 1200,
-        maxTargetsAtOnce: 4,
-        hasBombs: false,
-        hasObstacles: false,
-        bombChance: 0,
-        reward: {
-            perKill: 50,
-            completion: 500,
-            accuracyBonus: 250
-        }
-    },
-    // Niveau 7 - Mix statique et mobile
+    // Niveau 7 - Tailles variables + mouvement
     {
         id: 7,
-        name: "Adaptation",
-        description: "Mélange de cibles fixes et mobiles",
+        name: "Aberrations",
+        description: "Restez mobile pour survivre",
         type: "mixed",
-        targetCount: 35,
-        timeLimit: 60,
-        targetHealth: 60,
+        targetCount: 28,
+        timeLimit: 50, // -15s
+        targetHealth: 55,
         targetSpeed: 2.5,
-        staticRatio: 0.5,
-        spawnInterval: 1000,
+        staticRatio: 0.3,
+        spawnInterval: 1100,
+        maxTargetsAtOnce: 5,
+        variableSize: true,
+        minScale: 0.3,
+        maxScale: 2.2,
+        hasBombs: false,
+        hasObstacles: false,
+        bombChance: 0,
+        reward: {
+            perKill: 6,
+            completion: 80,
+            accuracyBonus: 40
+        },
+        hazards: { count: 6, speed: 3.5, damage: 25 }
+    },
+    // Niveau 8 - Vitesse extrême
+    {
+        id: 8,
+        name: "Fulgurance",
+        description: "Pluie de projectiles !",
+        type: "moving_fast",
+        targetCount: 30,
+        timeLimit: 50, // -15s
+        targetHealth: 65,
+        targetSpeed: 5,
+        spawnInterval: 900,
         maxTargetsAtOnce: 6,
         hasBombs: false,
         hasObstacles: false,
         bombChance: 0,
         reward: {
-            perKill: 50,
-            completion: 550,
-            accuracyBonus: 275
-        }
-    },
-    // Niveau 8 - Bombes + Obstacles
-    {
-        id: 8,
-        name: "Expert",
-        description: "Bombes et obstacles combinés",
-        type: "moving_slow",
-        targetCount: 30,
-        timeLimit: 55,
-        targetHealth: 70,
-        targetSpeed: 2,
-        spawnInterval: 1100,
-        maxTargetsAtOnce: 5,
-        hasBombs: true,
-        hasObstacles: true,
-        obstacleCount: 4,
-        bombChance: 0.25,
-        bombPenalty: 75,
-        reward: {
-            perKill: 60,
-            completion: 600,
-            accuracyBonus: 300
-        }
+            perKill: 6,
+            completion: 90,
+            accuracyBonus: 45
+        },
+        hazards: { count: 7, speed: 4.0, damage: 25 }
     },
     // Niveau 9 - Chaos
     {
         id: 9,
-        name: "Chaos",
-        description: "Tout combiné - Survivez !",
+        name: "Pandémonium",
+        description: "Esquivez tout, tirez sur tout",
         type: "chaos",
-        targetCount: 40,
-        timeLimit: 65,
-        targetHealth: 80,
+        targetCount: 35,
+        timeLimit: 55, // -15s
+        targetHealth: 55,
         targetSpeed: 3.5,
         speedVariation: 2,
-        spawnInterval: 900,
+        spawnInterval: 800,
         maxTargetsAtOnce: 7,
+        ephemeralChance: 0.35,
+        ephemeralDuration: 1.3,
         hasBombs: true,
-        hasObstacles: true,
-        obstacleCount: 6,
+        hasObstacles: false,
         bombChance: 0.2,
-        bombPenalty: 100,
+        bombInstantLoss: true,
         reward: {
-            perKill: 70,
-            completion: 700,
-            accuracyBonus: 350
-        }
+            perKill: 8,
+            completion: 100,
+            accuracyBonus: 50
+        },
+        hazards: { count: 8, speed: 4.5, damage: 30 }
     },
-    // Niveau 10 - Boss Final
+    // Niveau 10 - Final
     {
         id: 10,
-        name: "Confrontation Finale",
-        description: "Éliminez le Boss pour terminer",
-        type: "boss",
-        targetCount: 50,
-        timeLimit: 90,
-        targetHealth: 100,
-        targetSpeed: 3,
-        spawnInterval: 1000,
-        maxTargetsAtOnce: 6,
+        name: "Jugement Dernier",
+        description: "SURVIVEZ AUX MISSILES !",
+        type: "chaos",
+        targetCount: 45,
+        timeLimit: 70, // -20s
+        targetHealth: 80,
+        targetSpeed: 4,
+        speedVariation: 2.5,
+        spawnInterval: 700,
+        maxTargetsAtOnce: 8,
+        ephemeralChance: 0.3,
+        ephemeralDuration: 1.5,
         hasBombs: true,
-        hasObstacles: true,
-        obstacleCount: 4,
-        bombChance: 0.15,
-        bombPenalty: 100,
-        boss: {
-            health: 500,
-            size: 2.5,
-            speed: 1.5,
-            spawnAfterKills: 40
-        },
+        hasObstacles: false,
+        bombChance: 0.25,
+        bombInstantLoss: true,
         reward: {
-            perKill: 80,
-            completion: 1500,
-            accuracyBonus: 500,
-            bossKill: 1000
-        }
+            perKill: 10,
+            completion: 150,
+            accuracyBonus: 80
+        },
+        hazards: { count: 10, speed: 5.0, damage: 35 }
     }
 ];
 
 /**
  * Configuration des upgrades du joueur
+ * 8 paliers avec progression TRÈS lente - coûts élevés
  */
 export const UPGRADE_CONFIGS = {
     damage: {
         name: "Dégâts",
         icon: "⚔️",
-        baseValue: 25,
-        maxLevel: 5,
-        values: [25, 40, 55, 75, 100],
-        costs: [0, 100, 200, 350, 500]
+        baseValue: 20,
+        maxLevel: 8,
+        values: [20, 28, 36, 45, 55, 66, 80, 100],
+        costs: [0, 150, 350, 600, 900, 1300, 1800, 2500]
     },
     fireRate: {
         name: "Cadence",
         icon: "🔥",
-        baseValue: 300,
-        maxLevel: 5,
-        values: [300, 250, 200, 150, 100], // ms entre tirs (plus bas = mieux)
-        costs: [0, 150, 300, 450, 600]
+        baseValue: 350,
+        maxLevel: 8,
+        values: [350, 310, 270, 235, 200, 170, 140, 100], // ms entre tirs
+        costs: [0, 180, 400, 700, 1050, 1500, 2000, 2700]
     },
     magSize: {
         name: "Chargeur",
         icon: "🔫",
-        baseValue: 10,
-        maxLevel: 5,
-        values: [10, 15, 20, 25, 30],
-        costs: [0, 200, 350, 550, 800]
+        baseValue: 8,
+        maxLevel: 8,
+        values: [8, 10, 12, 15, 18, 22, 26, 32],
+        costs: [0, 200, 450, 750, 1100, 1600, 2200, 3000]
     },
     reloadSpeed: {
         name: "Rechargement",
         icon: "⚡",
-        baseValue: 2000,
-        maxLevel: 5,
-        values: [2000, 1600, 1200, 800, 500], // ms (plus bas = mieux)
-        costs: [0, 150, 300, 450, 600]
+        baseValue: 2500,
+        maxLevel: 8,
+        values: [2500, 2200, 1900, 1600, 1350, 1100, 850, 500], // ms
+        costs: [0, 160, 380, 650, 1000, 1450, 1950, 2600]
+    },
+    maxHealth: {
+        name: "Santé Max",
+        icon: "❤️",
+        baseValue: 100,
+        maxLevel: 8,
+        values: [100, 125, 150, 180, 220, 270, 330, 400],
+        costs: [0, 300, 600, 1000, 1500, 2200, 3000, 4000]
     }
 };
 
@@ -278,12 +298,12 @@ export function getLevelConfig(levelId) {
 }
 
 /**
- * Calculer le coût total pour upgrader une stat au niveau suivant
+ * Calculer le coût pour upgrader une stat au niveau suivant
  */
 export function getUpgradeCost(statName, currentLevel) {
     const config = UPGRADE_CONFIGS[statName];
-    if (!config || currentLevel >= config.maxLevel) return null;
-    return config.costs[currentLevel];
+    if (!config || currentLevel >= config.maxLevel - 1) return null;
+    return config.costs[currentLevel + 1];
 }
 
 /**

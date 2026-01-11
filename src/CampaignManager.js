@@ -16,7 +16,8 @@ export class CampaignManager {
                 damage: 0,
                 fireRate: 0,
                 magSize: 0,
-                reloadSpeed: 0
+                reloadSpeed: 0,
+                maxHealth: 0
             },
             levelStats: {} // Stats par niveau (meilleur score, etc.)
         };
@@ -34,6 +35,10 @@ export class CampaignManager {
         this.startTime = 0;
         this.bossSpawned = false;
         this.bossKilled = false;
+        
+        // Système de santé
+        this.maxHealth = 100;
+        this.currentHealth = 100;
     }
     
     /**
@@ -163,6 +168,7 @@ export class CampaignManager {
         this.startTime = Date.now();
         this.bossSpawned = false;
         this.bossKilled = false;
+        this.currentHealth = this.maxHealth;
         
         return this.currentConfig;
     }
@@ -208,6 +214,17 @@ export class CampaignManager {
         const penalty = this.currentConfig.bombPenalty || 50;
         this.moneyEarned = Math.max(0, this.moneyEarned - penalty);
         return penalty;
+    }
+
+    /**
+     * Enregistrer des dégâts subis
+     */
+    takeDamage(amount) {
+        this.currentHealth = Math.max(0, this.currentHealth - amount);
+        return {
+            currentHealth: this.currentHealth,
+            isDead: this.currentHealth <= 0
+        };
     }
     
     /**

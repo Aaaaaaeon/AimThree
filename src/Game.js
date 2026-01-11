@@ -6,9 +6,12 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Target } from './Target.js';
+import { Bomb } from './Bomb.js';
+import { Hazard } from './Hazard.js';
 import { Weapon } from './Weapon.js';
 import { SoundManager } from './SoundManager.js';
 import { CampaignManager } from './CampaignManager.js';
+import { LeaderboardManager } from './LeaderboardManager.js';
 
 export class Game {
     constructor(container) {
@@ -20,7 +23,10 @@ export class Game {
         this.score = 0;
         this.gameMode = 'static'; // 'static', 'tracking', 'parkour', or 'campaign'
         this.targets = [];
+        this.bombs = []; // For campaign mode
+        this.hazards = []; // New hazards
         this.lastSpawnTime = 0;
+        this.hazardSpawnTimer = 0;
 
         // Campaign Mode
         this.campaignManager = new CampaignManager();
@@ -56,6 +62,7 @@ export class Game {
         this.endScreenEl = document.getElementById('end-screen');
         this.hudEl = document.getElementById('hud');
         this.crosshairEl = document.getElementById('crosshair');
+        this.reloadIndicatorEl = document.getElementById('reload-indicator');
         this.heightEl = document.getElementById('height');
         this.sensSlider = document.getElementById('sens-slider');
         this.sensValue = document.getElementById('sens-value');
@@ -78,6 +85,15 @@ export class Game {
         this.cTimerEl = document.getElementById('c-timer');
         this.cAmmoEl = document.getElementById('c-ammo');
         this.cLevelEl = document.getElementById('c-level');
+        
+        // Level Intro Popup Elements
+        this.levelIntroEl = document.getElementById('level-intro');
+        this.introLevelNumEl = document.getElementById('intro-level-num');
+        this.introLevelNameEl = document.getElementById('intro-level-name');
+        this.introLevelDescEl = document.getElementById('intro-level-desc');
+        this.introObjectiveEl = document.getElementById('intro-objective');
+        this.introTimeEl = document.getElementById('intro-time');
+        this.introCountdownEl = document.getElementById('intro-countdown');
 
         // Scene
         this.scene = new THREE.Scene();
@@ -129,8 +145,9 @@ export class Game {
         this.isPaused = false;
         this.isGameOver = false;
         this.sensitivity = 1.0;
-        this.gameDuration = 60; // Default
-        this.timeLeft = 60;
+        this.sensitivity = 1.0;
+        this.gameDuration = 30; // Fixed 30s for non-campaign
+        this.timeLeft = 30;
         this.canJump = false;
 
         // Stats
@@ -160,9 +177,14 @@ export class Game {
 
         // --- Menu Listeners ---
         // Main Menu
+        document.getElementById('btn-competition').addEventListener('click', () => this.openCompetitionMenu());
+        document.getElementById('btn-competition-back').addEventListener('click', () => this.closeCompetitionMenu());
+        
+        // Competition Menu
         document.getElementById('btn-static').addEventListener('click', () => this.startGame('static'));
         document.getElementById('btn-tracking').addEventListener('click', () => this.startGame('tracking'));
         document.getElementById('btn-parkour').addEventListener('click', () => this.startGame('parkour'));
+        
         document.getElementById('btn-settings-main').addEventListener('click', () => this.openSettings('main'));
         document.getElementById('btn-restart').addEventListener('click', () => this.quitToMain());
         document.getElementById('btn-retry').addEventListener('click', () => this.retryGame()); // Retry Listener
@@ -193,13 +215,10 @@ export class Game {
             });
         });
 
-        // Duration Selector
-        document.querySelectorAll('.duration-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.gameDuration = parseInt(e.target.dataset.time);
-                document.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-            });
+        // Crosshair Color
+        document.getElementById('crosshair-color').addEventListener('input', (e) => {
+            const color = e.target.value;
+            this.crosshairEl.style.setProperty('--crosshair-color', color);
         });
 
         // --- Campaign Menu Listeners ---
@@ -215,7 +234,10 @@ export class Game {
 
         // Stop propagation on menus to prevent shooting/locking when clicking UI
         [this.menuEl, this.pauseEl, this.settingsEl, this.endScreenEl, 
-         this.campaignMenuEl, this.shopMenuEl, this.levelEndScreenEl].forEach(el => {
+         this.campaignMenuEl, this.shopMenuEl, this.levelEndScreenEl, 
+         document.getElementById('competition-menu'),
+         document.getElementById('leaderboard-screen'),
+         document.getElementById('submit-score-modal')].forEach(el => {
             if (el) {
                 el.addEventListener('mousedown', (e) => e.stopPropagation());
                 el.addEventListener('click', (e) => e.stopPropagation());
@@ -234,15 +256,51 @@ export class Game {
 
         // Sound Manager
         this.soundManager = new SoundManager();
+
+        // Leaderboard Manager
+        this.leaderboardManager = new LeaderboardManager();
+        this.leaderboardMenuEl = document.getElementById('leaderboard-screen');
+        this.submitScoreEl = document.getElementById('submit-score-modal');
+        
+        // Listeners for Leaderboard
+        document.getElementById('btn-leaderboard').addEventListener('click', () => this.openLeaderboard());
+        document.getElementById('btn-leaderboard-back').addEventListener('click', () => this.closeLeaderboard());
+        
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.loadLeaderboard(e.target.dataset.mode);
+            });
+        });
+
+        // Submit Score
+        document.getElementById('btn-submit-score').addEventListener('click', () => this.submitScore());
+        document.getElementById('btn-skip-submit').addEventListener('click', () => this.skipSubmit());
+    }
+
+    openCompetitionMenu() {
+        this.menuEl.style.display = 'none';
+        document.getElementById('competition-menu').style.display = 'flex';
+    }
+
+    closeCompetitionMenu() {
+        document.getElementById('competition-menu').style.display = 'none';
+        this.menuEl.style.display = 'flex';
     }
 
     startGame(mode) {
+        // Nettoyage du mode campagne si on vient de là
+        this.cleanupCampaignMode();
+        
         this.gameMode = mode;
         this.isPlaying = true;
         this.isPaused = false;
         this.isGameOver = false; // Ensure game over is cleared
 
         this.menuEl.style.display = 'none';
+        document.getElementById('competition-menu').style.display = 'none';
         this.pauseEl.style.display = 'none';
         this.settingsEl.style.display = 'none';
         this.endScreenEl.style.display = 'none';
@@ -309,6 +367,12 @@ export class Game {
         // Play game over sound
         this.soundManager.playGameOver();
 
+        // Competitive Modes -> Submit Score
+        if (this.gameMode === 'static' || this.gameMode === 'tracking') {
+             this.showSubmitScoreModal();
+             return;
+        }
+
         this.hudEl.style.display = 'none';
         this.crosshairEl.style.display = 'none';
         this.endScreenEl.style.display = 'flex';
@@ -328,15 +392,111 @@ export class Game {
         if (this.hitsEl) this.hitsEl.textContent = `Touchés : ${this.shotsHit}`;
     }
 
+    // --- Leaderboard Methods ---
+    openLeaderboard() {
+        document.getElementById('competition-menu').style.display = 'none';
+        this.leaderboardMenuEl.style.display = 'flex';
+        this.loadLeaderboard('static'); // Default tab
+    }
+
+    closeLeaderboard() {
+        this.leaderboardMenuEl.style.display = 'none';
+        document.getElementById('competition-menu').style.display = 'flex';
+    }
+
+    async loadLeaderboard(mode) {
+        const listEl = document.getElementById('leaderboard-list');
+        listEl.innerHTML = '<div class="loading-msg">Chargement...</div>';
+        
+        const scores = await this.leaderboardManager.getScores(mode);
+        
+        listEl.innerHTML = '';
+        if (scores.length === 0) {
+            listEl.innerHTML = '<div class="loading-msg">Aucun score pour le moment.</div>';
+            return;
+        }
+
+        scores.forEach((entry, index) => {
+            const item = document.createElement('div');
+            item.className = 'leaderboard-item';
+            item.innerHTML = `
+                <span class="rank">${index + 1}</span>
+                <span class="player">${entry.pseudo}</span>
+                <span class="score">${entry.score}</span>
+                <span class="accuracy">${entry.accuracy || 0}%</span>
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    // Called when game ends in competitive modes
+    showSubmitScoreModal() {
+        this.hudEl.style.display = 'none';
+        this.crosshairEl.style.display = 'none';
+        this.controls.unlock(); // Ensure mouse is free
+        
+        document.getElementById('submit-score-value').textContent = Math.floor(this.score);
+        this.submitScoreEl.style.display = 'flex';
+        
+        // Auto focus input
+        setTimeout(() => document.getElementById('player-pseudo').focus(), 100);
+    }
+
+    async submitScore() {
+        const pseudo = document.getElementById('player-pseudo').value.trim();
+        if (!pseudo) return; // Wait for input
+
+        const accuracy = this.shotsFired > 0 ? (this.shotsHit / this.shotsFired * 100).toFixed(1) : 0;
+        
+        this.submitScoreEl.innerHTML = '<div class="modal-content"><h2>Envoi...</h2></div>';
+        
+        await this.leaderboardManager.submitScore(pseudo, Math.floor(this.score), this.gameMode, accuracy);
+        
+        this.submitScoreEl.style.display = 'none';
+        // Reset modal content for next time (simple reload/reset would be better but DOM manipulations are fast)
+        // Ideally we revert the DOM. For now let's just assume we close it and game reloads fully on retry, 
+        // OR we manually rebuild. Let's just close and show leaderboard.
+        
+        // Actually showing leaderboard directly might be nice
+        this.openLeaderboard();
+        
+        // Restore modal HTML for next usage (hacky but works for this session)
+        this.submitScoreEl.innerHTML = `
+        <div class="modal-content">
+            <h2>NOUVEAU SCORE !</h2>
+            <div class="score-display">
+                <span id="submit-score-value">0</span> PTS
+            </div>
+            <p>Entrez votre pseudo pour le classement</p>
+            
+            <input type="text" id="player-pseudo" maxlength="15" placeholder="Votre Pseudo" autocomplete="off">
+            
+            <div class="modal-buttons">
+                <button id="btn-submit-score" class="btn-primary">ENVOYER</button>
+                <button id="btn-skip-submit" class="btn-secondary">IGNORER</button>
+            </div>
+        </div>`;
+        // Reattach listeners because we overwrote innerHTML
+        document.getElementById('btn-submit-score').addEventListener('click', () => this.submitScore());
+        document.getElementById('btn-skip-submit').addEventListener('click', () => this.skipSubmit());
+    }
+
+    skipSubmit() {
+        this.submitScoreEl.style.display = 'none';
+        this.quitToMain();
+    }
+
     pauseGame() {
         this.isPaused = true;
         this.pauseEl.style.display = 'flex';
+        this.crosshairEl.style.display = 'none';
         // HTML overlay handles mouse interactions now
     }
 
     resumeGame() {
         this.isPaused = false;
         this.pauseEl.style.display = 'none';
+        this.crosshairEl.style.display = 'block';
         this.controls.lock();
     }
 
@@ -353,6 +513,8 @@ export class Game {
         this.crosshairEl.style.display = 'none';
         this.endScreenEl.style.display = 'none';
         this.endScreenEl.classList.remove('parkour-win');
+        this.endScreenEl.classList.remove('parkour-win');
+        document.getElementById('competition-menu').style.display = 'none';
         this.menuEl.style.display = 'flex'; // Show Main Menu
 
         // Reset camera for menu view
@@ -403,49 +565,33 @@ export class Game {
         }
     }
 
-    // Create a platform instance (uses GLB if loaded, otherwise box)
+    // Create a platform instance (always box geometry)
     createPlatformMesh(width, depth, isGoal = false) {
-        const model = isGoal ? this.goalModel : this.platformModel;
+        const geo = new THREE.BoxGeometry(width, 0.5, depth);
+        const mat = isGoal
+            ? new THREE.MeshStandardMaterial({
+                color: 0x00ff88,
+                emissive: 0x00ff88,
+                emissiveIntensity: 0.5,
+                roughness: 0.2,
+                metalness: 0.8
+            })
+            : new THREE.MeshStandardMaterial({
+                color: 0x111122,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+        const mesh = new THREE.Mesh(geo, mat);
 
-        if (model) {
-            // Clone the loaded model
-            const clone = model.clone();
+        // Add edges
+        const edgeColor = isGoal ? 0x00ff88 : 0x00ffff;
+        const edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geo),
+            new THREE.MeshBasicMaterial({ color: edgeColor })
+        );
+        mesh.add(edges);
 
-            // Base scale factor - ADJUST THIS if your model is too big/small
-            // 0.1 = 10% of original size, 0.01 = 1% of original size, etc.
-            const baseScale = 0.1;
-
-            // Scale to match desired size
-            clone.scale.set(width * baseScale, baseScale, depth * baseScale);
-            return clone;
-        } else {
-            // Fallback to box geometry
-            const geo = new THREE.BoxGeometry(width, 0.5, depth);
-            const mat = isGoal
-                ? new THREE.MeshStandardMaterial({
-                    color: 0x00ff88,
-                    emissive: 0x00ff88,
-                    emissiveIntensity: 0.5,
-                    roughness: 0.2,
-                    metalness: 0.8
-                })
-                : new THREE.MeshStandardMaterial({
-                    color: 0x111122,
-                    roughness: 0.3,
-                    metalness: 0.7
-                });
-            const mesh = new THREE.Mesh(geo, mat);
-
-            // Add edges
-            const edgeColor = isGoal ? 0x00ff88 : 0x00ffff;
-            const edges = new THREE.LineSegments(
-                new THREE.EdgesGeometry(geo),
-                new THREE.MeshBasicMaterial({ color: edgeColor })
-            );
-            mesh.add(edges);
-
-            return mesh;
-        }
+        return mesh;
     }
 
     createParkourLevel() {
@@ -464,16 +610,16 @@ export class Game {
         // Generate ascending platforms in spiral pattern
         let angle = 0;
         for (let i = 1; i <= platformCount; i++) {
-            // Larger platforms - minimum size 2.5
-            const sizeFactor = Math.max(0.6, 1 - (i / platformCount) * 0.4);
-            const width = 3 * sizeFactor + 1.5;
-            const depth = 3 * sizeFactor + 1.5;
+            // Smaller platforms - size between 1.5 and 2.5
+            const sizeFactor = Math.max(0.5, 1 - (i / platformCount) * 0.5);
+            const width = 1.5 + sizeFactor;
+            const depth = 1.5 + sizeFactor;
 
             const platform = this.createPlatformMesh(width, depth, false);
 
-            // More spread out horizontally
-            const radius = 5 + Math.random() * 4;
-            angle += (Math.PI / 5) + (Math.random() * Math.PI / 6); // Smaller angle increments
+            // Much more spread out horizontally
+            const radius = 8 + Math.random() * 6; // 8-14 units from center
+            angle += (Math.PI / 4) + (Math.random() * Math.PI / 5);
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             const y = this.startPlatformY + (i * heightStep);
@@ -678,7 +824,7 @@ export class Game {
     spawnTarget() {
         let target = this.targets.find(t => !t.isActive);
         if (!target) {
-            target = new Target(this.scene);
+            target = new Target(this.scene, this.camera);
             this.targets.push(target);
         }
 
@@ -686,7 +832,22 @@ export class Game {
         const y = 1 + Math.random() * 4;
         const z = -5 - Math.random() * 15;
 
-        target.spawn(new THREE.Vector3(x, y, z));
+        // Mode Tracking : Vitesse augmentée et PV augmentés pour beam
+        if (this.gameMode === 'tracking') {
+            target.moveSpeed = 6.0; // Fast!
+            target.maxHealth = 40; // Needs continuous hits
+            target.targetScale = 1.2; // Slightly bigger to help tracking
+            target.spawn(new THREE.Vector3(x, y, z));
+            target.health = target.maxHealth; // Reset health
+            target.updateHealthBar();
+        } else {
+            // Default static/reflex mode
+            target.targetScale = 1.0;
+            target.moveSpeed = 0;
+            target.spawn(new THREE.Vector3(x, y, z));
+            target.health = 1; // One shot
+            target.updateHealthBar();
+        }
     }
 
     createBulletTracer() {
@@ -736,9 +897,17 @@ export class Game {
         this.resetGame();
     }
 
-    onMouseDown() {
-        if (!this.controls.isLocked) return;
-        if (this.isPaused || this.isGameOver) return;
+    onMouseDown(e) {
+        if (!this.isPlaying || this.isPaused || this.isGameOver) return;
+        
+        // In tracking mode, clicking does nothing (continuous beam instead)
+        if (this.gameMode === 'tracking') return;
+
+        // Ensure controls are locked
+        if (!this.controls.isLocked) {
+            this.controls.lock();
+            return;
+        }
 
         // Campaign mode has special handling
         if (this.gameMode === 'campaign') {
@@ -756,17 +925,42 @@ export class Game {
 
             // Raycast for hit detection
             this.raycaster.setFromCamera(this.center, this.camera);
-            const intersects = this.raycaster.intersectObjects(this.scene.children);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
             for (let i = 0; i < intersects.length; i++) {
                 const obj = intersects[i].object;
+                
+                // Check for bomb hit first
+                if (obj.userData.bomb && obj.userData.bomb.isActive) {
+                    const bomb = obj.userData.bomb;
+                    bomb.hit();
+                    
+                    // Bomb hit = instant loss if configured
+                    if (this.currentLevelConfig.bombInstantLoss) {
+                        this.endCampaignLevel(false);
+                        return;
+                    }
+                    break;
+                }
+                
+                // Check for target hit
                 if (obj.userData.target && obj.userData.target.isActive) {
                     const target = obj.userData.target;
                     
-                    // Apply damage
-                    target.health -= this.playerDamage;
+                    // Check if it's actually a bomb (compatibility check)
+                    if (target.isBomb) {
+                        target.hit();
+                        if (this.currentLevelConfig.bombInstantLoss) {
+                            this.endCampaignLevel(false);
+                            return;
+                        }
+                        break;
+                    }
                     
-                    if (target.health <= 0) {
+                    // Apply damage using takeDamage method
+                    const isDead = target.takeDamage(this.playerDamage);
+                    
+                    if (isDead) {
                         target.hit();
                         this.onCampaignTargetHit(target);
                     }
@@ -815,7 +1009,7 @@ export class Game {
             case 'ShiftLeft': this.isSprinting = true; break;
             case 'Space':
                 if (this.canJump === true) {
-                    this.velocity.y += 10; // Jump force
+                    this.velocity.y += 14; // Jump force (increased)
                     this.canJump = false;
                 }
                 break;
@@ -884,6 +1078,11 @@ export class Game {
                 return;
             }
             this.updateCampaignHUD();
+            
+            // Ensure targets keep spawning (especially for ephemeral levels)
+            if (this.isPlaying && !this.isPaused && !this.isGameOver) {
+                this.spawnCampaignTargets();
+            }
         } else if (this.gameMode !== 'parkour') {
             // Normal modes
             this.timeLeft -= delta;
@@ -1017,7 +1216,104 @@ export class Game {
 
         // Game Mode Logic
         if (this.controls.isLocked) {
-            this.targets.forEach(t => t.update(delta, this.gameMode));
+            // Update targets with camera for health bar orientation
+            this.targets.forEach(t => t.update(delta, this.gameMode, this.camera));
+
+            // TRACKING MODE BEAM LOGIC (Continuous Damage)
+            if (this.gameMode === 'tracking') {
+                this.raycaster.setFromCamera(this.center, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.targets.map(t => t.mesh).filter(m => m.visible));
+                
+                if (intersects.length > 0) {
+                    const hitObject = intersects[0].object;
+                    // Find the target instance from the mesh or its parents (in case we hit a child part)
+                    let targetMesh = hitObject;
+                    while (targetMesh && !targetMesh.userData.target && targetMesh.parent) {
+                        targetMesh = targetMesh.parent;
+                    }
+
+                    const target = targetMesh ? targetMesh.userData.target : null;
+                    
+                    if (target && target.isActive) {
+                        // Apply continuous damage
+                        const damage = 25 * delta; // 25 HP per second
+                        const isDead = target.takeContinuousDamage(damage);
+                        
+                        // Play beam sound if not playing? (Optional - loop short buzz)
+                        // For now we rely on no sound or just visual feedback
+                        
+                        if (isDead) {
+                            this.score++;
+                            this.shotsHit++; 
+                            target.despawn();
+                            this.soundManager.playHit(); 
+                            
+                            // Immediate respawn
+                            this.spawnTarget();
+                        }
+                    }
+                }
+            }
+            
+            // Update bombs
+            this.bombs.forEach(b => b.update(delta, this.gameMode, this.camera));
+
+            // Update Hazards & Check Collision
+            if (this.gameMode === 'campaign' && this.isPlaying && this.hazards) {
+                const playerPos = this.camera.position;
+                
+                // Periodic Spawning Logic
+                if (this.currentLevelConfig && this.currentLevelConfig.hazards) {
+                    const hConfig = this.currentLevelConfig.hazards;
+                    if (hConfig.count > 0) {
+                        // Higher count = more frequent spawns. 
+                        // count 1 = every 4s, count 10 = every 0.4s
+                        const spawnInterval = 4.0 / hConfig.count; 
+                        
+                        this.hazardSpawnTimer += delta;
+                        if (this.hazardSpawnTimer > spawnInterval) {
+                            this.hazardSpawnTimer = 0;
+                            // Find inactive hazard
+                            const hazard = this.hazards.find(h => !h.isActive);
+                            if (hazard) {
+                                hazard.spawn(playerPos, hConfig.speed);
+                            }
+                        }
+                    }
+                }
+
+                this.hazards.forEach(h => {
+                    if (h.isActive) {
+                        h.update(delta, playerPos);
+                        if (h.checkCollision(playerPos)) {
+                            // Damage
+                            const dmg = (this.currentLevelConfig.hazards && this.currentLevelConfig.hazards.damage) || 10;
+                            const result = this.campaignManager.takeDamage(dmg);
+                            this.soundManager.playExplosion();
+                            
+                            // Visual Feedback
+                            const healthEl = document.getElementById('c-health');
+                            if (healthEl) {
+                                healthEl.classList.add('damaged');
+                                setTimeout(() => healthEl.classList.remove('damaged'), 200);
+                            }
+                            this.updateCampaignHUD();
+                            
+                            // Pushback
+                            const pushDir = new THREE.Vector3().subVectors(playerPos, h.mesh.position).normalize();
+                            this.camera.position.addScaledVector(pushDir, 2.5);
+                            
+                            // Despawn on hit
+                            h.despawn();
+                            
+                            // Death
+                            if (result.isDead) {
+                                this.endCampaignLevel(false);
+                            }
+                        }
+                    }
+                });
+            }
 
             if (this.gameMode === 'tracking') {
                 this.raycaster.setFromCamera(this.center, this.camera);
@@ -1091,7 +1387,11 @@ export class Game {
             `;
 
             if (level.unlocked) {
-                btn.addEventListener('click', () => this.startCampaignLevel(level.id));
+                btn.addEventListener('click', () => {
+                   this.controls.lock();
+                   this.soundManager.init();
+                   this.startCampaignLevel(level.id);
+                });
             }
 
             this.levelsGridEl.appendChild(btn);
@@ -1134,9 +1434,9 @@ export class Game {
             // Value display
             let valueText = '';
             if (key === 'fireRate' || key === 'reloadSpeed') {
-                valueText = `${(upgrade.currentValue / 1000).toFixed(1)}s`;
+                valueText = `${(upgrade.currentValue / 1000).toFixed(2)}s`;
                 if (upgrade.nextValue) {
-                    valueText += ` → <span class="next-value">${(upgrade.nextValue / 1000).toFixed(1)}s</span>`;
+                    valueText += ` → <span class="next-value">${(upgrade.nextValue / 1000).toFixed(2)}s</span>`;
                 }
             } else {
                 valueText = upgrade.currentValue;
@@ -1176,6 +1476,60 @@ export class Game {
         
         if (!this.currentLevelConfig) return;
 
+        const config = this.currentLevelConfig;
+
+        // Hide all menus
+        this.campaignMenuEl.style.display = 'none';
+        this.menuEl.style.display = 'none';
+        this.pauseEl.style.display = 'none';
+        this.settingsEl.style.display = 'none';
+        this.endScreenEl.style.display = 'none';
+        this.levelEndScreenEl.style.display = 'none';
+
+        // Show level intro popup
+        this.showLevelIntro(config);
+    }
+
+    showLevelIntro(config) {
+        // Update popup content
+        this.introLevelNumEl.textContent = config.id;
+        this.introLevelNameEl.textContent = config.name;
+        this.introLevelDescEl.textContent = config.description;
+        this.introObjectiveEl.textContent = `Éliminez ${config.targetCount} cibles`;
+        this.introTimeEl.textContent = `${config.timeLimit} secondes`;
+        
+        // Show popup
+        this.levelIntroEl.style.display = 'flex';
+        
+        // Lock controls immediately on user gesture (the click that triggered this is likely gone, but let's try)
+        // Ideally we should lock on the click that called startCampaignLevel.
+        // But since we are here, let's assume the user just clicked "Start Level".
+        
+        this.soundManager.init(); // Ensure audio context is resumed
+        
+        // Countdown 3, 2, 1, GO!
+        let countdown = 3;
+        this.introCountdownEl.textContent = countdown;
+        
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                this.introCountdownEl.textContent = countdown;
+            } else if (countdown === 0) {
+                this.introCountdownEl.textContent = 'GO!';
+                this.introCountdownEl.style.color = '#00ff88';
+            } else {
+                clearInterval(countdownInterval);
+                this.introCountdownEl.style.color = '#ff00ff'; // Reset color
+                this.levelIntroEl.style.display = 'none';
+                this.actuallyStartLevel();
+            }
+        }, 1000);
+    }
+
+    actuallyStartLevel() {
+        const config = this.currentLevelConfig;
+        
         // Apply player stats
         const stats = this.campaignManager.getPlayerStats();
         this.fireRate = stats.fireRate;
@@ -1191,17 +1545,10 @@ export class Game {
         this.isReloading = false;
         this.lastShotTime = 0;
 
-        // Hide all menus
-        this.campaignMenuEl.style.display = 'none';
-        this.menuEl.style.display = 'none';
-        this.pauseEl.style.display = 'none';
-        this.settingsEl.style.display = 'none';
-        this.endScreenEl.style.display = 'none';
-        this.levelEndScreenEl.style.display = 'none';
-
         // Show campaign HUD
         this.hudEl.style.display = 'none';
         this.campaignHudEl.style.display = 'flex';
+        this.cAmmoEl.style.display = 'block';
         this.crosshairEl.style.display = 'block';
 
         // Reset game state
@@ -1209,13 +1556,23 @@ export class Game {
         this.shotsFired = 0;
         this.shotsHit = 0;
         
-        // Clear existing targets
+        // Hide reload indicator
+        if (this.reloadIndicatorEl) {
+            this.reloadIndicatorEl.classList.remove('active');
+        }
+        
+        // Clear existing targets and bombs
         this.targets.forEach(t => t.despawn());
+        this.bombs.forEach(b => b.despawn());
+        if (this.hazards) this.hazards.forEach(h => h.despawn());
 
         // Reset camera
         this.camera.position.set(0, 1.6, 0);
         this.velocity.set(0, 0, 0);
 
+        // Start timer NOW (after countdown)
+        this.campaignManager.levelStartTime = Date.now();
+        
         // Start
         this.clock.start();
         this.controls.lock();
@@ -1228,17 +1585,36 @@ export class Game {
 
         // Spawn first targets
         this.spawnCampaignTargets();
+        this.spawnHazards();
     }
 
     spawnCampaignTargets() {
         if (!this.currentLevelConfig || !this.isPlaying) return;
 
         const config = this.currentLevelConfig;
-        const activeTargets = this.targets.filter(t => t.isActive).length;
+        
+        // Limite max de bombes : 30% du total max
+        const maxBombs = Math.max(1, Math.floor(config.maxTargetsAtOnce * 0.3));
 
-        if (activeTargets < config.maxTargetsAtOnce) {
-            const toSpawn = config.maxTargetsAtOnce - activeTargets;
-            for (let i = 0; i < toSpawn; i++) {
+        // Spawn loop - recalculate counts each iteration
+        while (true) {
+            const activeTargets = this.targets.filter(t => t.isActive).length;
+            const activeBombs = this.bombs.filter(b => b.isActive).length;
+            const total = activeTargets + activeBombs;
+            
+            if (total >= config.maxTargetsAtOnce) break;
+            
+            // Décider si on spawn une bombe ou une cible
+            // Spawn bombe si : hasBombs ET on n'a pas atteint la limite ET random
+            // Mais toujours au moins 1 cible d'abord
+            const canSpawnBomb = config.hasBombs && 
+                                 activeBombs < maxBombs && 
+                                 activeTargets >= 1 &&
+                                 Math.random() < config.bombChance;
+            
+            if (canSpawnBomb) {
+                this.spawnBomb();
+            } else {
                 this.spawnSingleCampaignTarget();
             }
         }
@@ -1249,9 +1625,12 @@ export class Game {
         
         let target = this.targets.find(t => !t.isActive);
         if (!target) {
-            target = new Target(this.scene);
+            target = new Target(this.scene, this.camera);
             this.targets.push(target);
         }
+        
+        // Pass camera reference for health bar orientation
+        target.camera = this.camera;
 
         const x = (Math.random() - 0.5) * 15;
         const y = 1 + Math.random() * 4;
@@ -1270,12 +1649,71 @@ export class Game {
         } else if (config.type === 'mixed') {
             speed = Math.random() > config.staticRatio ? config.targetSpeed : 0;
         } else if (config.type === 'chaos') {
-            speed = config.targetSpeed + (Math.random() - 0.5) * config.speedVariation * 2;
+            speed = config.targetSpeed + (Math.random() - 0.5) * (config.speedVariation || 1) * 2;
         }
 
         target.moveSpeed = speed;
+        
+        // Ephemeral targets (type === 'ephemeral' or chaos with ephemeralChance)
+        target.isEphemeral = false;
+        
+        if (config.type === 'ephemeral') {
+            target.isEphemeral = true;
+            target.ephemeralDuration = config.ephemeralDuration || 1.5;
+        } else if (config.ephemeralChance && Math.random() < config.ephemeralChance) {
+            target.isEphemeral = true;
+            target.ephemeralDuration = config.ephemeralDuration || 1.2;
+        }
+        
+        // Variable size targets
+        if (config.variableSize) {
+            const minScale = config.minScale || 0.5;
+            const maxScale = config.maxScale || 2.0;
+            target.targetScale = minScale + Math.random() * (maxScale - minScale);
+        } else {
+            target.targetScale = 1.0;
+        }
+        
         target.spawn(new THREE.Vector3(x, y, z));
     }
+
+    spawnBomb() {
+        const config = this.currentLevelConfig;
+        
+        let bomb = this.bombs.find(b => !b.isActive);
+        if (!bomb) {
+            bomb = new Bomb(this.scene, this.camera);
+            this.bombs.push(bomb);
+        }
+        
+        bomb.camera = this.camera;
+
+        const x = (Math.random() - 0.5) * 15;
+        const y = 1 + Math.random() * 4;
+        const z = -5 - Math.random() * 15;
+
+        // Bombs can move too
+        bomb.moveSpeed = config.targetSpeed ? config.targetSpeed * 0.5 : 0;
+        
+        // Set ephemeral duration based on level config
+        bomb.ephemeralDuration = config.ephemeralDuration || 2.0;
+        
+        bomb.spawn(new THREE.Vector3(x, y, z));
+    }
+
+    spawnHazards() {
+        if (!this.currentLevelConfig || !this.currentLevelConfig.hazards) return;
+        
+        // Just create the pool, don't spawn them yet.
+        // We'll spawn them periodically in the update loop.
+        const poolSize = 20; // Enough to handle many on screen
+        while (this.hazards.length < poolSize) {
+            const hazard = new Hazard(this.scene, this.camera);
+            this.hazards.push(hazard);
+        }
+    }
+
+
 
     updateCampaignHUD() {
         if (!this.currentLevelConfig) return;
@@ -1290,6 +1728,22 @@ export class Game {
         this.cTimerEl.textContent = `⏱️ ${timeLeft}s`;
         this.cAmmoEl.textContent = this.isReloading ? '🔫 ...' : `🔫 ${this.currentAmmo}/${this.maxAmmo}`;
         this.cLevelEl.textContent = `Niv. ${this.campaignLevel}`;
+
+        // Update Health
+        const healthEl = document.getElementById('c-health');
+        if (healthEl) {
+            healthEl.textContent = `❤️ ${Math.ceil(this.campaignManager.currentHealth)}`;
+            healthEl.style.display = 'block';
+            
+            // Critical health styling
+            if (this.campaignManager.currentHealth <= 25) {
+                healthEl.style.color = '#ff0000';
+                healthEl.style.animation = 'pulse 0.2s infinite';
+            } else {
+                healthEl.style.color = '#ff4444';
+                healthEl.style.animation = 'none';
+            }
+        }
 
         // Timer warnings
         this.cTimerEl.classList.remove('warning', 'critical');
@@ -1313,11 +1767,21 @@ export class Game {
 
         this.isReloading = true;
         this.updateCampaignHUD();
+        
+        // Show reload indicator
+        if (this.reloadIndicatorEl) {
+            this.reloadIndicatorEl.classList.add('active');
+        }
 
         setTimeout(() => {
             this.currentAmmo = this.maxAmmo;
             this.isReloading = false;
             this.updateCampaignHUD();
+            
+            // Hide reload indicator
+            if (this.reloadIndicatorEl) {
+                this.reloadIndicatorEl.classList.remove('active');
+            }
         }, this.reloadTime);
     }
 
@@ -1375,6 +1839,9 @@ export class Game {
         // Hide HUD
         this.campaignHudEl.style.display = 'none';
         this.crosshairEl.style.display = 'none';
+        
+        const healthEl = document.getElementById('c-health');
+        if (healthEl) healthEl.style.display = 'none';
 
         // Show level end screen
         this.levelEndScreenEl.style.display = 'flex';
@@ -1424,9 +1891,49 @@ export class Game {
         this.levelEndScreenEl.style.display = 'none';
         this.campaignHudEl.style.display = 'none';
         
-        // Clear targets
+        // Hide reload indicator
+        if (this.reloadIndicatorEl) {
+            this.reloadIndicatorEl.classList.remove('active');
+        }
+        
+        // Clear targets and bombs
         this.targets.forEach(t => t.despawn());
+        this.bombs.forEach(b => b.despawn());
         
         this.openCampaignMenu();
+    }
+
+    /**
+     * Nettoyage complet du mode campagne
+     * Appelé quand on passe à un autre mode
+     */
+    cleanupCampaignMode() {
+        // Masquer tous les éléments UI de campagne
+        if (this.campaignHudEl) {
+            this.campaignHudEl.style.display = 'none';
+        }
+        if (this.cAmmoEl) {
+            this.cAmmoEl.style.display = 'none';
+        }
+        if (this.levelEndScreenEl) {
+            this.levelEndScreenEl.style.display = 'none';
+        }
+        if (this.campaignMenuEl) {
+            this.campaignMenuEl.style.display = 'none';
+        }
+        if (this.shopMenuEl) {
+            this.shopMenuEl.style.display = 'none';
+        }
+        if (this.reloadIndicatorEl) {
+            this.reloadIndicatorEl.classList.remove('active');
+        }
+        
+        // Nettoyer les bombes
+        this.bombs.forEach(b => b.despawn());
+        
+        // Reset état campagne
+        this.currentLevelConfig = null;
+        this.campaignLevel = 0;
+        this.isReloading = false;
     }
 }

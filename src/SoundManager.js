@@ -193,6 +193,41 @@ export class SoundManager {
         });
     }
 
+    // Explosion sound for hazards
+    playExplosion() {
+        if (!this.enabled || !this.initialized) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // White noise burst
+        const bufferSize = ctx.sampleRate * 0.5;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        noise.start(now);
+        noise.stop(now + 0.5);
+    }
+
     // Game over sound - descending tones
     playGameOver() {
         if (!this.enabled || !this.initialized) return;

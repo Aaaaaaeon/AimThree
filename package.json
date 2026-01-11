@@ -12,6 +12,8 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
     "three": "^0.160.0"
   }
 }

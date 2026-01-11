@@ -13,23 +13,77 @@
         <div class="menu-content">
             <h1>AIM THREE</h1>
             
-            <div class="setting-group" style="text-align: center;">
-                <label style="justify-content: center;">DURÉE</label>
-                <div class="duration-selector">
-                    <button class="duration-btn" data-time="30">30s</button>
-                    <button class="duration-btn active" data-time="60">60s</button>
-                    <button class="duration-btn" data-time="90">90s</button>
+            <div class="menu-buttons">
+                <button id="btn-campaign" class="btn-primary">🎮 CAMPAGNE</button>
+                <button id="btn-competition" class="btn-primary">🏆 COMPÉTITION</button>
+                <button id="btn-settings-main">PARAMÈTRES</button>
+            </div>
+            <p class="instructions">ZQSD Déplacer • MAJ Sprinter • ESPACE Sauter • R Recharger</p>
+            <p class="instructions">©Ulysse Reynaud 2026</p>
+        </div>
+      </div>
+
+      <!-- Menu Compétition (Sous-menu) -->
+      <div id="competition-menu" style="display: none;">
+        <div class="menu-content">
+            <h1>🏆 COMPÉTITION</h1>
+            <p style="color: #aaa; margin-bottom: 20px;">Mode classé - Durée fixe 30s</p>
+            
+            <div class="menu-buttons">
+                <button id="btn-static">MODE RÉFLEXE</button>
+                <button id="btn-tracking">MODE TRACKING</button>
+                <button id="btn-parkour">MODE PARKOUR</button>
+                <button id="btn-leaderboard">🏆 CLASSEMENT</button>
+                <button id="btn-competition-back">RETOUR</button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Écran Classement -->
+      <div id="leaderboard-screen" style="display: none;">
+        <div class="menu-content leaderboard-content">
+            <h1>🏆 CLASSEMENT</h1>
+            
+            <div class="leaderboard-tabs">
+                <button class="tab-btn active" data-mode="static">RÉFLEXE</button>
+                <button class="tab-btn" data-mode="tracking">TRACKING</button>
+                <button class="tab-btn" data-mode="parkour">PARKOUR</button>
+            </div>
+
+            <div class="leaderboard-container">
+                <div class="leaderboard-header">
+                    <span>#</span>
+                    <span>JOUEUR</span>
+                    <span>SCORE</span>
+                    <span>PRÉCISION</span>
+                </div>
+                <div id="leaderboard-list">
+                    <!-- Généré dynamiquement -->
+                    <div class="loading-msg">Chargement...</div>
                 </div>
             </div>
 
             <div class="menu-buttons">
-                <button id="btn-campaign" class="btn-primary">🎮 CAMPAGNE</button>
-                <button id="btn-static">MODE RÉFLEXE</button>
-                <button id="btn-tracking">MODE TRACKING</button>
-                <button id="btn-parkour">MODE PARKOUR</button>
-                <button id="btn-settings-main">PARAMÈTRES</button>
+                <button id="btn-leaderboard-back">RETOUR</button>
             </div>
-            <p class="instructions">ZQSD Déplacer • MAJ Sprinter • ESPACE Sauter • R Recharger</p>
+        </div>
+      </div>
+
+      <!-- Modal Submit Score -->
+      <div id="submit-score-modal" style="display: none;">
+        <div class="modal-content">
+            <h2>NOUVEAU SCORE !</h2>
+            <div class="score-display">
+                <span id="submit-score-value">0</span> PTS
+            </div>
+            <p>Entrez votre pseudo pour le classement</p>
+            
+            <input type="text" id="player-pseudo" maxlength="15" placeholder="Votre Pseudo" autocomplete="off">
+            
+            <div class="modal-buttons">
+                <button id="btn-submit-score" class="btn-primary">ENVOYER</button>
+                <button id="btn-skip-submit" class="btn-secondary">IGNORER</button>
+            </div>
         </div>
       </div>
 
@@ -73,7 +127,7 @@
             <h2 id="level-end-name">Échauffement</h2>
             
             <div class="stats-grid">
-                <div class="stat-item">CIBLES <span id="level-kills">0</span>/<span id="level-target">0</span></div>
+                <div class="stat-item">CIBLES <span id="level-kills">0</span> / <span id="level-target">0</span></div>
                 <div class="stat-item">PRÉCISION <span id="level-accuracy">0%</span></div>
                 <div class="stat-item">GAINS <span id="level-money">+0$</span></div>
                 <div class="stat-item">TOTAL <span id="level-total-money">0$</span></div>
@@ -138,6 +192,7 @@
                     <button class="crosshair-btn" data-style="dot">POINT</button>
                     <button class="crosshair-btn" data-style="cross">CROIX</button>
                     <button class="crosshair-btn" data-style="circle">CERCLE</button>
+                    <input type="color" id="crosshair-color" value="#00ffff" style="margin-left: 10px; cursor: pointer;">
                 </div>
             </div>
 
@@ -150,6 +205,12 @@
       <!-- Crosshair -->
       <div id="crosshair" style="display: none;"></div>
       
+      <!-- Reload Indicator -->
+      <div id="reload-indicator">
+        <div class="reload-ring"></div>
+        <div class="reload-ring"></div>
+      </div>
+      
       <!-- HUD Classique -->
       <div id="hud" style="display: none;">
         <div id="score">Score : 0</div>
@@ -158,13 +219,36 @@
         <div id="height" style="display: none;">Hauteur : 0m</div>
       </div>
 
-      <!-- HUD Campagne -->
+      <!-- HUD Campagne (barre supérieure) -->
       <div id="campaign-hud" style="display: none;">
         <div id="c-money">💰 0$</div>
         <div id="c-objective">🎯 0/0</div>
         <div id="c-timer">⏱️ 0s</div>
-        <div id="c-ammo">🔫 0/0</div>
         <div id="c-level">Niv. 1</div>
+      </div>
+      
+      <!-- Munitions (bas droite - séparé) -->
+      <div id="c-ammo" style="display: none;">🔫 0/0</div>
+
+      <!-- Santé (bas gauche - séparé) -->
+      <div id="c-health" style="display: none;">❤️ 100</div>
+      
+      <!-- Popup Introduction Niveau -->
+      <div id="level-intro" style="display: none;">
+        <div class="level-intro-content">
+          <div class="level-intro-number">NIVEAU <span id="intro-level-num">1</span></div>
+          <h1 id="intro-level-name">Initiation</h1>
+          <p id="intro-level-desc">Apprenez les bases du tir</p>
+          <div class="level-intro-objective">
+            <span class="objective-icon">🎯</span>
+            <span id="intro-objective">Éliminez 12 cibles</span>
+          </div>
+          <div class="level-intro-timer">
+            <span class="timer-icon">⏱️</span>
+            <span id="intro-time">40 secondes</span>
+          </div>
+          <div class="level-intro-countdown" id="intro-countdown">3</div>
+        </div>
       </div>
     </div>
     <div id="app"></div>
