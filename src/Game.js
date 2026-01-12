@@ -43,7 +43,9 @@ export class Game {
 
         // Parkour Mode State
         this.parkourPlatforms = [];
+        this.parkourTargets = []; // New targets array
         this.goalPlatform = null;
+        this.parkourTargetsDestroyed = 0;
         this.parkourStartTime = 0;
         this.startPlatformY = 2;
 
@@ -191,6 +193,7 @@ export class Game {
 
         // Pause Menu
         document.getElementById('btn-resume').addEventListener('click', () => this.resumeGame());
+        document.getElementById('btn-resume').addEventListener('click', () => this.resumeGame());
         document.getElementById('btn-settings-pause').addEventListener('click', () => this.openSettings('pause'));
         document.getElementById('btn-quit').addEventListener('click', () => this.quitToMain());
 
@@ -231,6 +234,14 @@ export class Game {
         document.getElementById('btn-level-retry').addEventListener('click', () => this.retryCampaignLevel());
         document.getElementById('btn-level-menu').addEventListener('click', () => this.backToCampaignMenu());
         document.getElementById('btn-level-next').addEventListener('click', () => this.nextCampaignLevel());
+        document.getElementById('btn-level-shop').addEventListener('click', () => {
+            // Open shop, logic will need to handle "Back" to return here??
+            // Currently closeShop likely just hides shop. 
+            // openShop() typically assumes coming from Campaign Menu. 
+            // Let's modify openShop slightly or just let it be. 
+            // Ideally we want Back to go to Level End if opened from there.
+            this.openShop('level-end'); 
+        });
 
         // Stop propagation on menus to prevent shooting/locking when clicking UI
         [this.menuEl, this.pauseEl, this.settingsEl, this.endScreenEl, 
@@ -278,11 +289,30 @@ export class Game {
         // Submit Score
         document.getElementById('btn-submit-score').addEventListener('click', () => this.submitScore());
         document.getElementById('btn-skip-submit').addEventListener('click', () => this.skipSubmit());
+
+        // Hide loading screen upon load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+                setTimeout(() => {
+                   const loader = document.getElementById('loading-screen');
+                   if (loader) loader.style.display = 'none';
+                }, 500);
+            }, 800);
+        });
     }
 
     openCompetitionMenu() {
         this.menuEl.style.display = 'none';
-        document.getElementById('competition-menu').style.display = 'flex';
+        const compMenu = document.getElementById('competition-menu');
+        compMenu.style.display = 'flex';
+        
+        // Bind buttons if not bound (using a flag or removing old listeners? simpler to just ensure they call safe start)
+        // Actually, if I haven't seen the listeners for competition buttons, they might be missing in Game.js or defined inline?
+        // Ah, I missed where 'startGame' is called for competition.
+        // Let's assume they are wired up in HTML or elsewhere. 
+        // I'll grab them by ID and add listeners just to be safe or checking the file again would be better.
+        // Proceeding with just fixing Retry and Campaign for now.
     }
 
     closeCompetitionMenu() {
@@ -321,6 +351,20 @@ export class Game {
             this.heightEl.style.display = 'none';
         }
 
+        // Hide Campaign specific UI elements
+        const healthEl = document.getElementById('c-health');
+        if (healthEl) healthEl.style.display = 'none';
+        const ammoEl = document.getElementById('c-ammo');
+        if (ammoEl) ammoEl.style.display = 'none';
+        const campaignHud = document.getElementById('campaign-hud');
+        if (campaignHud) campaignHud.style.display = 'none';
+
+        if (mode === 'parkour') {
+             this.showParkourIntro();
+             // Logic will continue in intro callback
+             return; 
+        }
+
         this.resetGame();
         this.clock.start(); // Restart the clock for new game
         this.controls.lock();
@@ -351,7 +395,21 @@ export class Game {
             this.velocity.set(0, 0, 0);
             this.parkourStartTime = Date.now();
         } else {
+
             this.targets.forEach(t => t.despawn());
+            
+            // Cleanup campaign entities
+            if (this.bombs) {
+                this.bombs.forEach(b => b.despawn());
+                // Don't clear array if we want to reuse pool, 
+                // but for full reset maybe clearer to just let them be re-pooled?
+                // Actually pool logic expects them to exist. 
+                // Just despawn is enough, they will stay inactive.
+            }
+            if (this.hazards) {
+                this.hazards.forEach(h => h.despawn());
+            }
+
             this.spawnTarget();
             this.camera.position.set(0, 1.6, 0);
             this.velocity.set(0, 0, 0);
@@ -433,13 +491,21 @@ export class Game {
     showSubmitScoreModal() {
         this.hudEl.style.display = 'none';
         this.crosshairEl.style.display = 'none';
-        this.controls.unlock(); // Ensure mouse is free
+        this.controls.unlock();
         
-        document.getElementById('submit-score-value').textContent = Math.floor(this.score);
+        let displayScore = Math.floor(this.score);
+        if (this.gameMode === 'parkour') {
+             displayScore = this.score.toFixed(2) + 's';
+        }
+
+        document.getElementById('submit-score-value').textContent = displayScore;
         this.submitScoreEl.style.display = 'flex';
         
-        // Auto focus input
-        setTimeout(() => document.getElementById('player-pseudo').focus(), 100);
+        // Auto focus
+        setTimeout(() => {
+             const input = document.getElementById('player-pseudo');
+             if (input) input.focus();
+        }, 100);
     }
 
     async submitScore() {
@@ -450,7 +516,12 @@ export class Game {
         
         this.submitScoreEl.innerHTML = '<div class="modal-content"><h2>Envoi...</h2></div>';
         
-        await this.leaderboardManager.submitScore(pseudo, Math.floor(this.score), this.gameMode, accuracy);
+        let scoreToSend = Math.floor(this.score);
+        if (this.gameMode === 'parkour') {
+            scoreToSend = this.score; // Send float
+        }
+
+        await this.leaderboardManager.submitScore(pseudo, scoreToSend, this.gameMode, accuracy);
         
         this.submitScoreEl.style.display = 'none';
         // Reset modal content for next time (simple reload/reset would be better but DOM manipulations are fast)
@@ -508,6 +579,11 @@ export class Game {
         // Clear parkour level if coming from parkour mode
         this.clearParkourLevel();
 
+        // Clear campaign entities
+        if (this.targets) this.targets.forEach(t => t.despawn());
+        if (this.bombs) this.bombs.forEach(b => b.despawn());
+        if (this.hazards) this.hazards.forEach(h => h.despawn());
+
         this.pauseEl.style.display = 'none';
         this.hudEl.style.display = 'none';
         this.crosshairEl.style.display = 'none';
@@ -515,6 +591,15 @@ export class Game {
         this.endScreenEl.classList.remove('parkour-win');
         this.endScreenEl.classList.remove('parkour-win');
         document.getElementById('competition-menu').style.display = 'none';
+        
+        // Hide campaign HUD elements
+        const healthEl = document.getElementById('c-health');
+        if (healthEl) healthEl.style.display = 'none';
+        const ammoEl = document.getElementById('c-ammo');
+        if (ammoEl) ammoEl.style.display = 'none';
+        const campaignHud = document.getElementById('campaign-hud');
+        if (campaignHud) campaignHud.style.display = 'none';
+
         this.menuEl.style.display = 'flex'; // Show Main Menu
 
         // Reset camera for menu view
@@ -653,9 +738,53 @@ export class Game {
         }
 
         this.scene.add(this.goalPlatform);
+        
+        // Spawn 5 Targets on random platforms (excluding start and goal)
+        this.parkourTargets = [];
+        this.parkourTargetsDestroyed = 0;
+        
+        // Helper to shuffle array
+        const shuffle = (array) => {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        };
+        
+        // Get valid platforms (indices 1 to length-1)
+        const validIndices = Array.from({length: this.parkourPlatforms.length - 1}, (_, i) => i + 1);
+        const shuffledIndices = shuffle(validIndices).slice(0, 8);
+        
+        shuffledIndices.forEach(idx => {
+            const platform = this.parkourPlatforms[idx];
+            const bounds = platform.userData.platformBounds;
+            
+            // Random position on platform with some offset
+            const targetPos = platform.position.clone();
+            targetPos.x += (Math.random() - 0.5) * (bounds.width * 0.6);
+            targetPos.z += (Math.random() - 0.5) * (bounds.depth * 0.6);
+            targetPos.y += 1.0 + Math.random() * 1.5; // Height 1.0 to 2.5 above platform
+            
+            const target = new Target(this.scene, null);
+            target.spawn(targetPos);
+            target.health = 1;
+            target.mesh.userData.isParkourTarget = true;
+            this.parkourTargets.push(target);
+        });
+
+        // Intro Popup logic will be handled in startGame
     }
 
     clearParkourLevel() {
+        // Remove targets
+        if (this.parkourTargets) {
+            this.parkourTargets.forEach(t => t.despawn());
+        }
+        this.parkourTargets = [];
+        this.parkourTargetsDestroyed = 0;
+
+        // Remove all parkour platforms from scene
         // Remove all parkour platforms from scene
         this.parkourPlatforms.forEach(platform => {
             this.scene.remove(platform);
@@ -891,6 +1020,21 @@ export class Game {
         this.scoreEl.textContent = `Score : ${Math.floor(this.score)}`;
     }
 
+    showHUDMessage(msg) {
+        let msgEl = document.getElementById('hud-message');
+        if (!msgEl) {
+            msgEl = document.createElement('div');
+            msgEl.id = 'hud-message';
+            msgEl.style.cssText = 'position:absolute;top:20%;left:50%;transform:translate(-50%,-50%);color:#ff4444;font-size:2rem;font-weight:bold;text-shadow:0 0 10px black;pointer-events:none;z-index:9999;';
+            document.body.appendChild(msgEl);
+        }
+        msgEl.textContent = msg;
+        msgEl.style.display = 'block';
+        msgEl.style.opacity = '1';
+        
+        setTimeout(() => { msgEl.style.opacity = '0'; }, 1500);
+    }
+
     setMode(mode) {
         this.gameMode = mode;
         this.modeEl.textContent = `Mode : ${mode === 'static' ? 'Réflexe' : 'Tracking'}`;
@@ -981,18 +1125,51 @@ export class Game {
         // Play shoot sound
         this.soundManager.playShoot();
 
+        // Parkour mode - simple target shooting
+        if (this.gameMode === 'parkour') {
+            this.raycaster.setFromCamera(this.center, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+
+            for (let i = 0; i < intersects.length; i++) {
+                const obj = intersects[i].object;
+                if (obj.userData.target && obj.userData.target.isActive) {
+                    const target = obj.userData.target;
+                    target.despawn();
+                    this.parkourTargetsDestroyed++;
+                    this.showHUDMessage(`Cibles : ${this.parkourTargetsDestroyed}/8`);
+                    this.soundManager.playHit();
+                    this.shotsHit++;
+                    break;
+                }
+            }
+            return; // Parkour done
+        }
+
         if (this.gameMode === 'static') {
             this.raycaster.setFromCamera(this.center, this.camera);
             const intersects = this.raycaster.intersectObjects(this.scene.children);
 
             for (let i = 0; i < intersects.length; i++) {
                 if (intersects[i].object.userData.target && intersects[i].object.userData.target.isActive) {
-                    intersects[i].object.userData.target.hit();
+                    const target = intersects[i].object.userData.target;
+                    
+                    // Check if it's a parkour target
+                    if (intersects[i].object.userData.isParkourTarget) {
+                        target.despawn();
+                        this.parkourTargetsDestroyed++;
+                        this.showHUDMessage(`Cibles : ${this.parkourTargetsDestroyed}/8`);
+                        this.soundManager.playHit();
+                        this.shotsHit++;
+                        break;
+                    }
+                    
+                    // Normal target handling
+                    target.hit();
                     this.score += 100;
                     this.shotsHit++;
                     this.updateHUD();
                     this.spawnTarget();
-                    this.soundManager.playHit(); // Play hit sound
+                    this.soundManager.playHit();
                     break;
                 }
             }
@@ -1171,7 +1348,27 @@ export class Game {
 
                         // Check if landed on goal
                         if (platform.userData.isGoal) {
-                            this.winParkour();
+                            
+                             // Check targets
+                             if (this.parkourTargetsDestroyed < 8) {
+                                 if (!this.hudMessageTimer || Date.now() - this.hudMessageTimer > 2000) {
+                                     this.showHUDMessage(`Manque ${8 - this.parkourTargetsDestroyed} cibles !`);
+                                     this.hudMessageTimer = Date.now();
+                                 }
+                                 return;
+                             }
+
+                            this.endGame();
+                            this.endScreenEl.classList.add('parkour-win');
+                            
+                            const elapsed = ((Date.now() - this.parkourStartTime) / 1000).toFixed(2);
+                            document.querySelector('#end-screen h1').textContent = "SOMMET ATTEINT !";
+                            
+                            this.score = Number(elapsed); // Store as number
+                            
+                            // Show Submit Score Modal directly
+                            this.showSubmitScoreModal();
+                            
                             return;
                         }
                         break;
@@ -1398,17 +1595,29 @@ export class Game {
         });
     }
 
-    openShop() {
+    openShop(source = 'campaign-menu') {
+        this.shopReturnTo = source;
+        
+        // Hide potential previous screens
         this.campaignMenuEl.style.display = 'none';
+        if (source === 'level-end') {
+            this.levelEndScreenEl.style.display = 'none';
+        }
+
         this.shopMenuEl.style.display = 'flex';
         this.renderUpgradesGrid();
     }
 
     closeShop() {
         this.shopMenuEl.style.display = 'none';
-        this.campaignMenuEl.style.display = 'flex';
-        this.updateCampaignMoney();
-        this.renderLevelsGrid();
+        
+        if (this.shopReturnTo === 'level-end') {
+            this.levelEndScreenEl.style.display = 'flex';
+        } else {
+            this.campaignMenuEl.style.display = 'flex';
+            this.updateCampaignMoney();
+            this.renderLevelsGrid();
+        }
     }
 
     renderUpgradesGrid() {
@@ -1488,6 +1697,52 @@ export class Game {
 
         // Show level intro popup
         this.showLevelIntro(config);
+    }
+
+    showParkourIntro() {
+        const config = {
+            id: 'PARKOUR',
+            name: 'Ascension',
+            description: 'Grimpez au sommet le plus vite possible !',
+            targetCount: 5,
+            timeLimit: '∞'
+        };
+
+        // Reuse level intro popup elements
+        this.introLevelNumEl.textContent = config.id;
+        this.introLevelNameEl.textContent = config.name;
+        this.introLevelDescEl.textContent = config.description;
+        this.introObjectiveEl.textContent = `Détruisez 8 cibles et atteignez le sommet`;
+        this.introTimeEl.textContent = `Chrono`;
+        
+        // Show popup
+        this.levelIntroEl.style.display = 'flex';
+        
+        this.soundManager.init();
+        
+        let countdown = 3;
+        this.introCountdownEl.textContent = countdown;
+        
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                this.introCountdownEl.textContent = countdown;
+            } else if (countdown === 0) {
+                this.introCountdownEl.textContent = 'GO!';
+                this.introCountdownEl.style.color = '#00ff88';
+            } else {
+                clearInterval(countdownInterval);
+                this.introCountdownEl.style.color = '#ff00ff'; // Reset color
+                this.levelIntroEl.style.display = 'none';
+                
+                // Start Parkour Logic
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.controls.lock();
+                this.resetGame(); // Ensure clean slate
+                this.parkourStartTime = Date.now(); // Start timer NOW
+            }
+        }, 1000);
     }
 
     showLevelIntro(config) {

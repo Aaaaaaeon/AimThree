@@ -5,8 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AimThree</title>
+    <link rel="stylesheet" href="/src/style.css">
   </head>
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <p>CHARGEMENT...</p>
+    </div>
+
     <div id="ui-layer">
       <!-- Menu Principal -->
       <div id="main-menu">
@@ -139,6 +146,7 @@
 
             <div class="menu-buttons">
                 <button id="btn-level-next" style="display: none;">NIVEAU SUIVANT</button>
+                <button id="btn-level-shop">BOUTIQUE 🛒</button>
                 <button id="btn-level-retry">RÉESSAYER</button>
                 <button id="btn-level-menu">MENU CAMPAGNE</button>
             </div>

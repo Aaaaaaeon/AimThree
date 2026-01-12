@@ -69,8 +69,12 @@ app.post('/api/scores', (req, res) => {
     
     db[mode].push(newEntry);
     
-    // Sort by Score DESC
-    db[mode].sort((a, b) => b.score - a.score);
+    // Sort by Score DESC (or ASC for Time/Parkour)
+    if (mode === 'parkour') {
+        db[mode].sort((a, b) => a.score - b.score); // Ascending for time
+    } else {
+        db[mode].sort((a, b) => b.score - a.score); // Descending for points
+    }
     
     // Keep top 50
     if (db[mode].length > 50) {
