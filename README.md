@@ -2,10 +2,6 @@
 
 AimThree est un entraîneur de visée (Aim Trainer) haute performance développé avec **Three.js**. Améliorez votre précision, votre temps de réaction et votre tracking à travers différents modes de jeu stimulants.
 
-## 🚀 Accès Direct
-
-Le projet est accessible en ligne à l'adresse suivante : **[aaeon.fr](https://aaeon.fr)**
-
 ## ✨ Fonctionnalités
 
 - **Mode Campagne** : 10 niveaux progressifs avec gestion de l'économie, des améliorations (Dégâts, Cadence, Munitions, Santé) et des dangers (Missiles).
