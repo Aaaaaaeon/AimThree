@@ -2,7 +2,7 @@
 
 AimThree est un entraîneur de visée (Aim Trainer) haute performance développé avec **Three.js**. Améliorez votre précision, votre temps de réaction et votre tracking à travers différents modes de jeu stimulants.
 
-[![Regarder la vidéo de démo](https://img.youtube.com/vi/WLgmA6AVJ8w/default.jpg)](https://www.youtube.com/watch?v=WLgmA6AVJ8w)
+[![Regarder la vidéo de démo](https://img.youtube.com/vi/WLgmA6AVJ8w/maxresdefault.jpg)](https://www.youtube.com/watch?v=WLgmA6AVJ8w)
 
 ## ✨ Fonctionnalités
 
